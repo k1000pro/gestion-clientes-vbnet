@@ -39,8 +39,22 @@ BEGIN
         CONSTRAINT PK_Usuarios PRIMARY KEY CLUSTERED (UsuarioId)
     );
 
-    CREATE UNIQUE INDEX UX_Usuarios_NombreUsuario ON dbo.Usuarios (NombreUsuario);
     PRINT 'Tabla Usuarios creada.';
+END
+GO
+
+/*
+    Los índices se crean fuera del guard de su tabla, cada uno con su propia comprobación.
+    Si estuvieran dentro, una corrida previa que hubiera creado la tabla pero se hubiera
+    interrumpido antes del índice dejaría la base sin la restricción de unicidad, y toda
+    reejecución posterior saltaría el bloque entero al ver que la tabla ya existe. El script
+    diría "ya existe" y la base quedaría sin su índice único, en silencio.
+*/
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_Usuarios_NombreUsuario' AND object_id = OBJECT_ID('dbo.Usuarios'))
+BEGIN
+    CREATE UNIQUE INDEX UX_Usuarios_NombreUsuario ON dbo.Usuarios (NombreUsuario);
+    PRINT 'Indice UX_Usuarios_NombreUsuario creado.';
 END
 GO
 
@@ -60,8 +74,15 @@ BEGIN
         CONSTRAINT PK_Clientes PRIMARY KEY CLUSTERED (ClienteId)
     );
 
-    CREATE UNIQUE INDEX UX_Clientes_Documento ON dbo.Clientes (Documento);
     PRINT 'Tabla Clientes creada.';
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_Clientes_Documento' AND object_id = OBJECT_ID('dbo.Clientes'))
+BEGIN
+    CREATE UNIQUE INDEX UX_Clientes_Documento ON dbo.Clientes (Documento);
+    PRINT 'Indice UX_Clientes_Documento creado.';
 END
 GO
 
@@ -91,8 +112,22 @@ BEGIN
         CONSTRAINT FK_Bitacora_Usuarios FOREIGN KEY (UsuarioId) REFERENCES dbo.Usuarios (UsuarioId)
     );
 
-    CREATE INDEX IX_Bitacora_FechaHora ON dbo.Bitacora (FechaHora DESC);
-    CREATE INDEX IX_Bitacora_ClienteId ON dbo.Bitacora (ClienteId);
     PRINT 'Tabla Bitacora creada.';
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'IX_Bitacora_FechaHora' AND object_id = OBJECT_ID('dbo.Bitacora'))
+BEGIN
+    CREATE INDEX IX_Bitacora_FechaHora ON dbo.Bitacora (FechaHora DESC);
+    PRINT 'Indice IX_Bitacora_FechaHora creado.';
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'IX_Bitacora_ClienteId' AND object_id = OBJECT_ID('dbo.Bitacora'))
+BEGIN
+    CREATE INDEX IX_Bitacora_ClienteId ON dbo.Bitacora (ClienteId);
+    PRINT 'Indice IX_Bitacora_ClienteId creado.';
 END
 GO
