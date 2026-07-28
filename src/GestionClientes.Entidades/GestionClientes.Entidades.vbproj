@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GestionClientes.Entidades</RootNamespace>
+    <AssemblyName>GestionClientes.Entidades</AssemblyName>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Company>Kamilo Martinez</Company>
+    <Product>Sistema de Gestion de Clientes</Product>
+  </PropertyGroup>
+
+</Project>
