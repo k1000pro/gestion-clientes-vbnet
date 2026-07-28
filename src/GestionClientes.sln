@@ -7,6 +7,8 @@ Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "GestionClientes.Entidades",
 EndProject
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "GestionClientes.Pruebas", "GestionClientes.Pruebas\GestionClientes.Pruebas.vbproj", "{DB00971B-199E-47E9-94AD-42DD454E2844}"
 EndProject
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "GestionClientes.Negocio", "GestionClientes.Negocio\GestionClientes.Negocio.vbproj", "{CEC3BE0B-C8F6-44CF-B309-A15B43738250}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{DB00971B-199E-47E9-94AD-42DD454E2844}.Release|x64.Build.0 = Release|Any CPU
 		{DB00971B-199E-47E9-94AD-42DD454E2844}.Release|x86.ActiveCfg = Release|Any CPU
 		{DB00971B-199E-47E9-94AD-42DD454E2844}.Release|x86.Build.0 = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|x64.Build.0 = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Debug|x86.Build.0 = Debug|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|x64.ActiveCfg = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|x64.Build.0 = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|x86.ActiveCfg = Release|Any CPU
+		{CEC3BE0B-C8F6-44CF-B309-A15B43738250}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

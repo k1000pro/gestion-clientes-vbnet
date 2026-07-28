@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GestionClientes.Entidades\GestionClientes.Entidades.vbproj" />
+    <ProjectReference Include="..\GestionClientes.Negocio\GestionClientes.Negocio.vbproj" />
   </ItemGroup>
 
 </Project>

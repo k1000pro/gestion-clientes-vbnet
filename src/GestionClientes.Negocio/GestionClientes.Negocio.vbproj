@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GestionClientes.Negocio</RootNamespace>
+    <AssemblyName>GestionClientes.Negocio</AssemblyName>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestionClientes.Entidades\GestionClientes.Entidades.vbproj" />
+  </ItemGroup>
+
+</Project>
