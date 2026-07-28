@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GestionClientes.Datos</RootNamespace>
+    <AssemblyName>GestionClientes.Datos</AssemblyName>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+
+  <!--
+    Los proyectos SDK-style que apuntan a .NET Framework no incluyen automáticamente todo el
+    conjunto clásico de referencias. System.Data y System.Configuration se declaran de forma
+    explícita.
+  -->
+  <ItemGroup>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestionClientes.Entidades\GestionClientes.Entidades.vbproj" />
+  </ItemGroup>
+
+</Project>
