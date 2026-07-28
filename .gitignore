@@ -1,0 +1,23 @@
+# Resultados de compilación
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userprefs
+*.vbproj.user
+
+# NuGet
+packages/
+*.nupkg
+
+# Registros de la aplicación
+src/GestionClientes.Web/App_Data/*.log
+
+# Sistema operativo
+Thumbs.db
+desktop.ini
