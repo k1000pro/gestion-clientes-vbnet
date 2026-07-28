@@ -1,0 +1,39 @@
+body {
+    background-color: #f5f6f8;
+}
+
+.marca {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.tarjeta-login {
+    max-width: 25rem;
+    margin: 6rem auto;
+}
+
+.tabla-datos th {
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.tabla-datos td {
+    vertical-align: middle;
+}
+
+.detalle-bitacora {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-width: 28rem;
+}
+
+.pie-pagina {
+    color: #6c757d;
+    font-size: 0.8125rem;
+    padding: 2rem 0 1rem;
+}

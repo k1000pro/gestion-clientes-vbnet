@@ -1,0 +1,56 @@
+<%@ Master Language="VB" AutoEventWireup="false" CodeBehind="Site.Master.vb" Inherits="GestionClientes.Web.SiteMaster" %>
+
+<!DOCTYPE html>
+<html lang="es">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestión de Clientes</title>
+    <link rel="stylesheet" href="<%= ResolveUrl("~/Content/bootstrap.min.css") %>" />
+    <link rel="stylesheet" href="<%= ResolveUrl("~/Content/sitio.css") %>" />
+    <asp:ContentPlaceHolder ID="Encabezado" runat="server" />
+</head>
+<body>
+    <form id="formPrincipal" runat="server">
+
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand marca" href="<%= ResolveUrl("~/Clientes.aspx") %>">Gestión de Clientes</a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="menuPrincipal">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="<%= ResolveUrl("~/Clientes.aspx") %>">Clientes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<%= ResolveUrl("~/Bitacora.aspx") %>">Bitácora</a>
+                        </li>
+                    </ul>
+
+                    <span class="navbar-text me-3">
+                        <asp:Literal ID="litUsuario" runat="server" />
+                    </span>
+
+                    <asp:LinkButton ID="lnkSalir" runat="server" CssClass="btn btn-outline-light btn-sm"
+                                    CausesValidation="False">Cerrar sesión</asp:LinkButton>
+                </div>
+            </div>
+        </nav>
+
+        <main class="container py-4">
+            <asp:ContentPlaceHolder ID="Contenido" runat="server" />
+        </main>
+
+        <footer class="container pie-pagina">
+            Sistema de Gestión de Clientes &mdash; ASP.NET Web Forms (VB.NET) y SQL Server
+        </footer>
+
+    </form>
+
+    <script src="<%= ResolveUrl("~/Scripts/bootstrap.bundle.min.js") %>"></script>
+</body>
+</html>
