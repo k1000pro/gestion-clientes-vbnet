@@ -5,9 +5,6 @@
 Public Class PaginaBase
     Inherits Page
 
-    Public Const ClaveUsuarioId As String = "UsuarioId"
-    Public Const ClaveNombreCompleto As String = "NombreCompleto"
-
     ''' <summary>
     ''' Vincula el ViewState a la sesión del usuario. Un ViewState capturado de otra sesión falla
     ''' la validación de integridad, lo que bloquea los ataques de falsificación de petición
@@ -18,12 +15,10 @@ Public Class PaginaBase
         MyBase.OnInit(e)
     End Sub
 
-    ''' <summary>Identificador del usuario autenticado, o 0 si no hay sesión.</summary>
+    ''' <summary>Identificador del usuario autenticado, o 0 si no hay identidad.</summary>
     Protected ReadOnly Property UsuarioIdActual As Integer
         Get
-            Dim valor = Session(ClaveUsuarioId)
-            If valor Is Nothing Then Return 0
-            Return CInt(valor)
+            Return IdentidadUsuario.ObtenerUsuarioId(User)
         End Get
     End Property
 

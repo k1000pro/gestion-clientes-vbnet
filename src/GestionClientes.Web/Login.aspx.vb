@@ -1,9 +1,13 @@
-﻿Imports System.Web.Security
+﻿Imports System.Globalization
+Imports System.Web.Security
 Imports GestionClientes.Negocio
 
 ''' <summary>Pantalla de autenticación.</summary>
 Public Class PaginaLogin
     Inherits Page
+
+    ''' <summary>Debe coincidir con el timeout declarado en &lt;forms&gt; de Web.config.</summary>
+    Private Const DuracionTicketEnMinutos As Integer = 30
 
     Private ReadOnly _autenticacion As New ServicioAutenticacion()
 
@@ -36,19 +40,37 @@ Public Class PaginaLogin
     End Sub
 
     ''' <summary>
-    ''' Establece la sesión autenticada. Se limpia cualquier dato de la sesión anterior antes de
-    ''' escribir los del usuario que inicia sesión, para que no queden datos ajenos reutilizables.
-    ''' No se llama a Session.Abandon(): esa llamada marca la sesión actual para su destrucción al
-    ''' final de la petición, así que los valores que se escriben aquí después nunca llegan a la
-    ''' siguiente petición (ASP.NET entrega una sesión nueva y vacía) y UsuarioIdActual queda en 0.
+    ''' Establece la sesión autenticada.
+    '''
+    ''' La sesión anterior se descarta y su cookie se borra antes de emitir la identidad nueva:
+    ''' un identificador de sesión que un tercero ya conociera deja así de ser válido en el
+    ''' momento en que el usuario se autentica, que es la defensa contra la fijación de sesión.
+    '''
+    ''' Por eso mismo el identificador y el nombre del usuario NO se guardan en Session: la sesión
+    ''' acaba de descartarse y cualquier valor escrito ahora se perdería al terminar la petición.
+    ''' Viajan dentro del ticket de autenticación, que va firmado y cifrado.
     ''' </summary>
     Private Sub IniciarSesion(usuarioId As Integer, nombreUsuario As String, nombreCompleto As String)
         Session.Clear()
+        Session.Abandon()
+        Response.Cookies.Add(New HttpCookie("ASP.NET_SessionId", String.Empty))
 
-        FormsAuthentication.SetAuthCookie(nombreUsuario, False)
+        Dim ticket As New FormsAuthenticationTicket(
+            2,
+            nombreUsuario,
+            DateTime.Now,
+            DateTime.Now.AddMinutes(DuracionTicketEnMinutos),
+            False,
+            usuarioId.ToString(CultureInfo.InvariantCulture) & "|" & nombreCompleto,
+            FormsAuthentication.FormsCookiePath)
 
-        Session(PaginaBase.ClaveUsuarioId) = usuarioId
-        Session(PaginaBase.ClaveNombreCompleto) = nombreCompleto
+        Dim cookie As New HttpCookie(FormsAuthentication.FormsCookieName, FormsAuthentication.Encrypt(ticket)) With {
+            .HttpOnly = True,
+            .Path = FormsAuthentication.FormsCookiePath,
+            .Secure = FormsAuthentication.RequireSSL
+        }
+
+        Response.Cookies.Add(cookie)
 
         Dim destino = FormsAuthentication.GetRedirectUrl(nombreUsuario, False)
         Response.Redirect(destino, False)

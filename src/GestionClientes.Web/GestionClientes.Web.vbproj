@@ -85,6 +85,7 @@
 
   <ItemGroup>
     <Compile Include="PaginaBase.vb" />
+    <Compile Include="IdentidadUsuario.vb" />
     <Compile Include="Global.asax.vb">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>

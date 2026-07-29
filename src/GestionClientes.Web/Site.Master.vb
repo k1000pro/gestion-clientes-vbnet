@@ -20,12 +20,16 @@ Public Class SiteMaster
         Response.Redirect(FormsAuthentication.LoginUrl, False)
     End Sub
 
+    ''' <summary>
+    ''' Nombre a mostrar en la barra superior: el nombre completo si el ticket lo trae, y si no el
+    ''' nombre de usuario.
+    ''' </summary>
     Private Function ObtenerNombreParaMostrar() As String
-        Dim nombreCompleto = TryCast(Session(PaginaBase.ClaveNombreCompleto), String)
-        If Not String.IsNullOrWhiteSpace(nombreCompleto) Then Return nombreCompleto
-
         ' Se accede a través de Page.User y no de User a secas: MasterPage no expone la propiedad
         ' User, solo la expone Page. Escribirlo sin el prefijo no compila (BC30451).
+        Dim nombreCompleto = IdentidadUsuario.ObtenerNombreCompleto(Page.User)
+        If Not String.IsNullOrWhiteSpace(nombreCompleto) Then Return nombreCompleto
+
         If Page.User IsNot Nothing AndAlso Page.User.Identity IsNot Nothing Then
             Return Page.User.Identity.Name
         End If
