@@ -5,9 +5,9 @@ Partial Public Class PaginaLogin
 
     Protected WithEvents formLogin As Global.System.Web.UI.HtmlControls.HtmlForm
 
-    Protected WithEvents pnlError As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlAviso As Global.System.Web.UI.WebControls.Panel
 
-    Protected WithEvents litError As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litAviso As Global.System.Web.UI.WebControls.Literal
 
     Protected WithEvents txtUsuario As Global.System.Web.UI.WebControls.TextBox
 

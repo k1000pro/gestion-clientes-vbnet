@@ -5,9 +5,9 @@ Partial Public Class PaginaClientes
 
     Protected WithEvents btnNuevo As Global.System.Web.UI.WebControls.Button
 
-    Protected WithEvents pnlMensaje As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlAviso As Global.System.Web.UI.WebControls.Panel
 
-    Protected WithEvents litMensaje As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litAviso As Global.System.Web.UI.WebControls.Literal
 
     Protected WithEvents txtBusqueda As Global.System.Web.UI.WebControls.TextBox
 

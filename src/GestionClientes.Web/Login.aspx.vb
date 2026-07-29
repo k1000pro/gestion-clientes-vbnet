@@ -37,7 +37,7 @@ Public Class PaginaLogin
 
             ' Mensaje deliberadamente genérico: distinguir "usuario inexistente" de "contraseña
             ' incorrecta" permitiría averiguar qué cuentas existen probando nombres.
-            MostrarError("Usuario o contraseña incorrectos.")
+            MostrarAviso("Usuario o contraseña incorrectos.")
             txtContrasena.Text = String.Empty
             Return
         End If
@@ -87,9 +87,9 @@ Public Class PaginaLogin
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
-    Private Sub MostrarError(mensaje As String)
-        litError.Text = HttpUtility.HtmlEncode(mensaje)
-        pnlError.Visible = True
+    Private Sub MostrarAviso(mensaje As String)
+        litAviso.Text = HttpUtility.HtmlEncode(mensaje)
+        pnlAviso.Visible = True
     End Sub
 
     ''' <summary>

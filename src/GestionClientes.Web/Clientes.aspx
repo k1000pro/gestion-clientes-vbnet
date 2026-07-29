@@ -11,8 +11,8 @@
                     CssClass="btn btn-primary" CausesValidation="False" />
     </div>
 
-    <asp:Panel ID="pnlMensaje" runat="server" Visible="False" role="alert">
-        <asp:Literal ID="litMensaje" runat="server" />
+    <asp:Panel ID="pnlAviso" runat="server" Visible="False" role="alert">
+        <asp:Literal ID="litAviso" runat="server" />
     </asp:Panel>
 
     <div class="card shadow-sm mb-4">

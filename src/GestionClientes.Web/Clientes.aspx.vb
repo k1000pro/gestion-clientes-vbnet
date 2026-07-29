@@ -142,13 +142,13 @@ Public Class PaginaClientes
         LimpiarFormulario()
         litTituloFormulario.Text = "Nuevo cliente"
         pnlFormulario.Visible = True
-        OcultarMensaje()
+        OcultarAviso()
     End Sub
 
     Protected Sub btnCancelar_Click(sender As Object, e As EventArgs) Handles btnCancelar.Click
         LimpiarFormulario()
         pnlFormulario.Visible = False
-        OcultarMensaje()
+        OcultarAviso()
     End Sub
 
     ''' <summary>Despacha los comandos de las filas de la rejilla.</summary>
@@ -167,7 +167,7 @@ Public Class PaginaClientes
         Dim cliente = _clientes.ObtenerPorId(clienteId)
 
         If cliente Is Nothing Then
-            MostrarMensaje("El cliente ya no existe. Se actualizó el listado.", False)
+            MostrarAviso("El cliente ya no existe. Se actualizó el listado.", False)
             pnlFormulario.Visible = False
             CargarClientes()
             Return
@@ -185,13 +185,13 @@ Public Class PaginaClientes
 
         litTituloFormulario.Text = "Editar cliente"
         pnlFormulario.Visible = True
-        OcultarMensaje()
+        OcultarAviso()
     End Sub
 
     Private Sub EliminarCliente(clienteId As Integer)
         Dim resultado = _clientes.Eliminar(clienteId, UsuarioIdActual, NombreUsuarioActual)
 
-        MostrarMensaje(resultado.PrimerMensaje, resultado.Exitoso)
+        MostrarAviso(resultado.PrimerMensaje, resultado.Exitoso)
         pnlFormulario.Visible = False
         LimpiarFormulario()
         ' No se reinicia PaginaActual aqui: si la fila borrada era la unica de la ultima
@@ -222,12 +222,12 @@ Public Class PaginaClientes
         Dim resultado = _clientes.Guardar(cliente, UsuarioIdActual, NombreUsuarioActual)
 
         If Not resultado.Exitoso Then
-            MostrarMensaje(String.Join(" ", resultado.Mensajes), False)
+            MostrarAviso(String.Join(" ", resultado.Mensajes), False)
             pnlFormulario.Visible = True
             Return
         End If
 
-        MostrarMensaje(resultado.PrimerMensaje, True)
+        MostrarAviso(resultado.PrimerMensaje, True)
         LimpiarFormulario()
         pnlFormulario.Visible = False
         CargarClientes()
@@ -268,20 +268,20 @@ Public Class PaginaClientes
     End Sub
 
     ''' <summary>Muestra un aviso. El texto se codifica porque puede contener datos del usuario.</summary>
-    Private Sub MostrarMensaje(texto As String, exitoso As Boolean)
+    Private Sub MostrarAviso(texto As String, exitoso As Boolean)
         If String.IsNullOrWhiteSpace(texto) Then
-            OcultarMensaje()
+            OcultarAviso()
             Return
         End If
 
-        litMensaje.Text = HttpUtility.HtmlEncode(texto)
-        pnlMensaje.CssClass = If(exitoso, "alert alert-success py-2", "alert alert-danger py-2")
-        pnlMensaje.Visible = True
+        litAviso.Text = HttpUtility.HtmlEncode(texto)
+        pnlAviso.CssClass = If(exitoso, "alert alert-success py-2", "alert alert-danger py-2")
+        pnlAviso.Visible = True
     End Sub
 
-    Private Sub OcultarMensaje()
-        pnlMensaje.Visible = False
-        litMensaje.Text = String.Empty
+    Private Sub OcultarAviso()
+        pnlAviso.Visible = False
+        litAviso.Text = String.Empty
     End Sub
 
     ''' <summary>
@@ -292,7 +292,7 @@ Public Class PaginaClientes
         Dim clienteId As Integer
 
         If Not Integer.TryParse(hdnClienteAEliminar.Value, clienteId) Then
-            MostrarMensaje("No se indicó el cliente a eliminar.", False)
+            MostrarAviso("No se indicó el cliente a eliminar.", False)
             Return
         End If
 

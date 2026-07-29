@@ -18,9 +18,9 @@
                     <h1 class="h4 mb-1 marca">Gestión de Clientes</h1>
                     <p class="text-muted mb-4">Ingrese sus credenciales para continuar.</p>
 
-                    <asp:Panel ID="pnlError" runat="server" Visible="False"
+                    <asp:Panel ID="pnlAviso" runat="server" Visible="False"
                                CssClass="alert alert-danger py-2" role="alert">
-                        <asp:Literal ID="litError" runat="server" />
+                        <asp:Literal ID="litAviso" runat="server" />
                     </asp:Panel>
 
                     <div class="mb-3">
