@@ -33,7 +33,7 @@ Public Class PaginaLogin
         If usuario Is Nothing Then
             ' Se registra el nombre intentado, nunca la contraseña: un registro que contenga
             ' credenciales convierte el archivo de log en un objetivo.
-            Registro.Warn($"Intento de inicio de sesión fallido para el usuario '{txtUsuario.Text}'.")
+            Registro.Warn($"Intento de inicio de sesión fallido para el usuario '{ParaRegistro(txtUsuario.Text)}'.")
 
             ' Mensaje deliberadamente genérico: distinguir "usuario inexistente" de "contraseña
             ' incorrecta" permitiría averiguar qué cuentas existen probando nombres.
@@ -91,5 +91,18 @@ Public Class PaginaLogin
         litError.Text = HttpUtility.HtmlEncode(mensaje)
         pnlError.Visible = True
     End Sub
+
+    ''' <summary>
+    ''' Prepara un valor recibido del usuario para escribirlo en un registro de líneas. Sin esto,
+    ''' un salto de línea en el nombre de usuario permitiría fabricar entradas de log falsas.
+    ''' </summary>
+    Private Shared Function ParaRegistro(valor As String) As String
+        If String.IsNullOrEmpty(valor) Then Return String.Empty
+
+        Dim limpio = valor.Replace(ControlChars.Cr, " "c).Replace(ControlChars.Lf, " "c)
+        If limpio.Length > 50 Then limpio = limpio.Substring(0, 50)
+
+        Return limpio
+    End Function
 
 End Class

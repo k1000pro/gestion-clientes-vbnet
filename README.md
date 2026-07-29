@@ -74,7 +74,7 @@ Contraseña: Admin123$
 | `GestionClientes.Datos` | Acceso a datos con ADO.NET. Único proyecto que conoce SQL. |
 | `GestionClientes.Negocio` | Validaciones, hashing y orquestación. |
 | `GestionClientes.Web` | Páginas Web Forms. No conoce SQL. |
-| `GestionClientes.Pruebas` | Pruebas unitarias de hashing y validación. |
+| `GestionClientes.Pruebas` | Pruebas unitarias de hashing, validación y paginación. |
 
 Las dependencias van en una sola dirección: `Web` → `Negocio` → `Datos` → `Entidades`.
 
@@ -84,8 +84,9 @@ Las dependencias van en una sola dirección: `Web` → `Negocio` → `Datos` →
 dotnet test src\GestionClientes.Pruebas\GestionClientes.Pruebas.vbproj
 ```
 
-Cubren la derivación y verificación de contraseñas y las reglas de validación de clientes, que
-es donde vive la lógica que puede fallar sin dar señales visibles.
+34 pruebas. Cubren la derivación y verificación de contraseñas, las reglas de validación de
+clientes y el cálculo de totales de la paginación, que es donde vive la lógica que puede fallar
+sin dar señales visibles.
 
 ## Decisiones de diseño
 

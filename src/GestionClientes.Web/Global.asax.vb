@@ -30,12 +30,26 @@ Public Class Global_asax
     '''
     ''' Ya no hace falta envolver la escritura en un Try mudo: log4net no propaga los fallos de su
     ''' appender al llamador, que es exactamente lo que aquel Try imitaba a mano.
+    '''
+    ''' La URL se obtiene aparte, dentro de su propio Try: este manejador puede dispararse en
+    ''' contextos donde Request no está disponible (típicamente un fallo durante el arranque de la
+    ''' aplicación), y ahí Request.Url lanza HttpException. Si eso ocurriera dentro de la
+    ''' interpolación del mensaje, el manejador de errores fallaría y ocultaría la excepción
+    ''' original, que es justo lo que existe para evitar.
     ''' </summary>
     Sub Application_Error(sender As Object, e As EventArgs)
         Dim excepcion = Server.GetLastError()
         If excepcion Is Nothing Then Return
 
-        Registro.Error($"Excepción no controlada en {Request.Url}", excepcion)
+        Dim url As String = "(desconocida)"
+        Try
+            url = HttpContext.Current?.Request?.Url?.ToString()
+        Catch
+            ' Request no está disponible en todos los contextos en los que se dispara este
+            ' manejador, y un fallo aquí ocultaría la excepción original.
+        End Try
+
+        Registro.Error($"Excepción no controlada en {If(url, "(desconocida)")}", excepcion)
     End Sub
 
 End Class

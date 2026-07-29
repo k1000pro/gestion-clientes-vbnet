@@ -68,9 +68,11 @@ Public Class Paginador
         litResumen.Text = HttpUtility.HtmlEncode($"Mostrando {primero}–{ultimo} de {TotalRegistros}")
 
         lnkAnterior.Enabled = PaginaActual > 1
+        lnkAnterior.CssClass = If(PaginaActual > 1, "page-link", "page-link disabled")
         lnkAnterior.CommandArgument = (PaginaActual - 1).ToString()
 
         lnkSiguiente.Enabled = PaginaActual < TotalPaginas
+        lnkSiguiente.CssClass = If(PaginaActual < TotalPaginas, "page-link", "page-link disabled")
         lnkSiguiente.CommandArgument = (PaginaActual + 1).ToString()
 
         rptPaginas.DataSource = CalcularVentana()
@@ -108,9 +110,7 @@ Public Class Paginador
 
         If numero = PaginaActual Then
             enlace.Enabled = False
-            e.Item.Controls(0).Visible = True
-            Dim elemento = TryCast(e.Item.FindControl("lnkPagina"), LinkButton)
-            If elemento IsNot Nothing Then elemento.CssClass = "page-link active"
+            enlace.CssClass = "page-link active"
         End If
     End Sub
 

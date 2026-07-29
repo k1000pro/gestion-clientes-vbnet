@@ -72,6 +72,14 @@ Public Class PaginaBitacora
 
         Dim resultado = _bitacora.Listar(filtro)
 
+        ' Si el filtro cambió y la página actual quedó fuera de rango, la rejilla saldría vacía
+        ' con registros existentes detrás. Se retrocede a la última página válida y se repite.
+        If resultado.Elementos.Count = 0 AndAlso resultado.TotalRegistros > 0 AndAlso PaginaActual > 1 Then
+            PaginaActual = resultado.TotalPaginas
+            filtro.Pagina = PaginaActual
+            resultado = _bitacora.Listar(filtro)
+        End If
+
         gvBitacora.DataSource = resultado.Elementos
         gvBitacora.DataBind()
 

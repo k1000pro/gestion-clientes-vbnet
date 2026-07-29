@@ -1,4 +1,4 @@
-﻿// Rellena el modal de confirmación con los datos de la fila cuyo botón lo abrió.
+// Rellena el modal de confirmación con los datos de la fila cuyo botón lo abrió.
 (function () {
     'use strict';
 
