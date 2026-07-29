@@ -9,6 +9,8 @@ Public Class PaginaLogin
     ''' <summary>Debe coincidir con el timeout declarado en &lt;forms&gt; de Web.config.</summary>
     Private Const DuracionTicketEnMinutos As Integer = 30
 
+    Private Shared ReadOnly Registro As log4net.ILog = log4net.LogManager.GetLogger(GetType(PaginaLogin))
+
     Private ReadOnly _autenticacion As New ServicioAutenticacion()
 
     ''' <summary>Vincula el ViewState a la sesión para proteger el postback del login.</summary>
@@ -29,6 +31,10 @@ Public Class PaginaLogin
         Dim usuario = _autenticacion.Autenticar(txtUsuario.Text, txtContrasena.Text)
 
         If usuario Is Nothing Then
+            ' Se registra el nombre intentado, nunca la contraseña: un registro que contenga
+            ' credenciales convierte el archivo de log en un objetivo.
+            Registro.Warn($"Intento de inicio de sesión fallido para el usuario '{txtUsuario.Text}'.")
+
             ' Mensaje deliberadamente genérico: distinguir "usuario inexistente" de "contraseña
             ' incorrecta" permitiría averiguar qué cuentas existen probando nombres.
             MostrarError("Usuario o contraseña incorrectos.")
@@ -73,6 +79,8 @@ Public Class PaginaLogin
         }
 
         Response.Cookies.Add(cookie)
+
+        Registro.Info($"Inicio de sesión correcto del usuario '{nombreUsuario}'.")
 
         Dim destino = FormsAuthentication.GetRedirectUrl(nombreUsuario, False)
         Response.Redirect(destino, False)

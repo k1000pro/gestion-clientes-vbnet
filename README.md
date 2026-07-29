@@ -12,6 +12,7 @@ Prueba técnica — Kamilo Martínez
 - ADO.NET con procedimientos almacenados
 - MSTest
 - Bootstrap 5.3 (servido localmente)
+- log4net
 
 ## Requisitos previos
 
@@ -88,11 +89,13 @@ es donde vive la lógica que puede fallar sin dar señales visibles.
 
 ## Decisiones de diseño
 
-**La bitácora se escribe dentro del procedimiento almacenado, no desde la aplicación.**
-Cada procedimiento de escritura modifica al cliente y registra la acción en la misma
-transacción. Si el registro se hiciera con una llamada separada, bastaría con que una ruta nueva
-olvidara invocarla para que la auditoría tuviera huecos, y un fallo entre ambas operaciones
-dejaría la base inconsistente. Así la garantía es estructural: se aplican ambas o ninguna.
+**La bitácora es un requisito de trazabilidad típico de las instituciones financieras
+supervisadas**, donde debe poder demostrarse quién tocó qué registro y cuándo. Por eso se escribe
+dentro del procedimiento almacenado y no desde la aplicación: cada procedimiento de escritura
+modifica al cliente y registra la acción en la misma transacción. Si el registro se hiciera con
+una llamada separada, bastaría con que una ruta nueva olvidara invocarla para que la auditoría
+tuviera huecos, y un fallo entre ambas operaciones dejaría la base inconsistente. Así la garantía
+es estructural: se aplican ambas o ninguna.
 
 **`Bitacora.ClienteId` no tiene clave foránea.** El borrado de clientes es físico. Una clave
 foránea obligaría a borrar en cascada, destruyendo el historial que la bitácora existe para
@@ -105,6 +108,12 @@ usuario se renombre o se elimine. `UsuarioId` se mantiene para poder unir con `U
 **Bitácora por procedimiento almacenado y no por trigger.** Un trigger no puede saber qué
 usuario *de la aplicación* originó el cambio: solo ve la cuenta con la que se conecta el pool de
 conexiones.
+
+**Control de concurrencia optimista en `Clientes`.** No es una preocupación teórica: varios
+operadores trabajando a la vez sobre el mismo registro de cliente es el modo de operación normal
+en ese tipo de institución. La columna `ROWVERSION` que compara el procedimiento de actualización
+evita que el segundo guardado sobrescriba en silencio el cambio del primero; el que llega después
+recibe un aviso en lugar de perder su información sin saberlo.
 
 **PBKDF2 en lugar de un hash simple con salt.** Un hash rápido, aunque lleve salt, se ataca por
 fuerza bruta con GPU. Se usa `Rfc2898DeriveBytes` con HMAC-SHA256 y 100000 iteraciones, salt de
@@ -133,6 +142,31 @@ clave publicada en el código deja falsificar tickets de autenticación y ViewSt
 despliegue que copie la configuración tal cual. Se prefiere que un reinicio del proceso obligue a
 volver a iniciar sesión. En un despliegue real la clave se fija fuera del control de versiones,
 por configuración del servidor.
+
+## Mejoras posteriores a la primera versión
+
+**Paginación y ordenamiento en el motor.** El listado de clientes y la bitácora paginan con
+`OFFSET/FETCH` y devuelven el total en un parámetro de salida, en lugar de traer todas las filas
+y descartar las que no caben. El ordenamiento por columna no usa SQL dinámico: el nombre de
+columna llega como parámetro y se resuelve con expresiones `CASE`, de modo que un valor
+arbitrario no puede ejecutarse. El orden lleva siempre un desempate por clave primaria, sin el
+cual una fila podría intercambiarse entre páginas y no aparecer nunca.
+
+**Control de concurrencia optimista.** `Clientes` tiene una columna `ROWVERSION` que el
+procedimiento de actualización compara. Si dos usuarios abren el mismo cliente y ambos guardan,
+el segundo recibe un aviso en lugar de sobrescribir en silencio el cambio del primero.
+
+**Transformaciones de configuración.** `Web.Release.config` quita `debug="true"` y fuerza
+`customErrors` a `On` al publicar. Se aplican al **publicar**, no al compilar: ejecutar en Release
+desde Visual Studio no las dispara.
+
+**Confirmación de borrado con modal.** Sustituye al diálogo nativo del navegador e identifica al
+cliente por nombre. Usa el Bootstrap que el proyecto ya sirve localmente, sin agregar
+dependencias. El nombre se inserta con `textContent` y no con `innerHTML`.
+
+**Registro con log4net.** Reemplaza la escritura manual a archivo. Rota por tamaño, conserva
+cinco archivos y permite cambiar destino y nivel sin recompilar. Registra los intentos de inicio
+de sesión fallidos con el nombre de usuario intentado, nunca con la contraseña.
 
 ## Seguridad
 
