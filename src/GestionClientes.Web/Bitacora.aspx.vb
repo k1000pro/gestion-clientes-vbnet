@@ -106,6 +106,29 @@ Public Class PaginaBitacora
     End Sub
 
     ''' <summary>
+    ''' Añade una flecha a la cabecera por la que se está ordenando. Se usa RowCreated y no
+    ''' RowDataBound porque la fila de encabezado no se enlaza a datos.
+    ''' </summary>
+    Protected Sub gvBitacora_RowCreated(sender As Object, e As GridViewRowEventArgs) Handles gvBitacora.RowCreated
+        If e.Row.RowType <> DataControlRowType.Header Then Return
+
+        For Each celda As TableCell In e.Row.Cells
+            If celda.Controls.Count = 0 Then Continue For
+
+            Dim enlace = TryCast(celda.Controls(0), LinkButton)
+            If enlace Is Nothing Then Continue For
+
+            If Not String.Equals(If(enlace.CommandArgument, String.Empty), OrdenActual, StringComparison.Ordinal) Then Continue For
+
+            Dim flecha As New Literal With {
+                .Text = If(DescendenteActual, " <span class=""orden-indicador"">&#9660;</span>",
+                                              " <span class=""orden-indicador"">&#9650;</span>")
+            }
+            celda.Controls.Add(flecha)
+        Next
+    End Sub
+
+    ''' <summary>
     ''' Arma el filtro a partir de los controles. Devuelve Nothing y muestra un aviso si el rango
     ''' de fechas está invertido, en lugar de consultar sabiendo que no devolverá nada.
     ''' </summary>

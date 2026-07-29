@@ -102,6 +102,31 @@ Public Class PaginaClientes
         CargarClientes()
     End Sub
 
+    ''' <summary>
+    ''' Añade una flecha a la cabecera por la que se está ordenando. Sin esto, la rejilla reordena
+    ''' pero no dice por qué columna ni en qué sentido, y el usuario solo puede deducirlo mirando
+    ''' los datos. Va en RowCreated y no en RowDataBound porque la fila de encabezado no se enlaza
+    ''' a datos y RowDataBound no se dispara para ella.
+    ''' </summary>
+    Protected Sub gvClientes_RowCreated(sender As Object, e As GridViewRowEventArgs) Handles gvClientes.RowCreated
+        If e.Row.RowType <> DataControlRowType.Header Then Return
+
+        For Each celda As TableCell In e.Row.Cells
+            If celda.Controls.Count = 0 Then Continue For
+
+            Dim enlace = TryCast(celda.Controls(0), LinkButton)
+            If enlace Is Nothing Then Continue For
+
+            If Not String.Equals(If(enlace.CommandArgument, String.Empty), OrdenActual, StringComparison.Ordinal) Then Continue For
+
+            Dim flecha As New Literal With {
+                .Text = If(DescendenteActual, " <span class=""orden-indicador"">&#9660;</span>",
+                                              " <span class=""orden-indicador"">&#9650;</span>")
+            }
+            celda.Controls.Add(flecha)
+        Next
+    End Sub
+
     Protected Sub btnBuscar_Click(sender As Object, e As EventArgs) Handles btnBuscar.Click
         PaginaActual = 1
         CargarClientes()
