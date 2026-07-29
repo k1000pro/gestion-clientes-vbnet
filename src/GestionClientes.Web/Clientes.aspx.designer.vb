@@ -17,6 +17,8 @@ Partial Public Class PaginaClientes
 
     Protected WithEvents gvClientes As Global.System.Web.UI.WebControls.GridView
 
+    Protected WithEvents pgClientes As Global.GestionClientes.Web.Paginador
+
     Protected WithEvents pnlFormulario As Global.System.Web.UI.WebControls.Panel
 
     Protected WithEvents litTituloFormulario As Global.System.Web.UI.WebControls.Literal

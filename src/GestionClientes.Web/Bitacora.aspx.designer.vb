@@ -21,4 +21,6 @@ Partial Public Class PaginaBitacora
 
     Protected WithEvents gvBitacora As Global.System.Web.UI.WebControls.GridView
 
+    Protected WithEvents pgBitacora As Global.GestionClientes.Web.Paginador
+
 End Class

@@ -9,8 +9,8 @@ Public Class ServicioCliente
 
     Private ReadOnly _clientes As New ClienteDAL()
 
-    Public Function Listar(busqueda As String) As List(Of Cliente)
-        Return _clientes.Listar(busqueda)
+    Public Function Listar(criterios As CriteriosCliente) As ResultadoPaginado(Of Cliente)
+        Return _clientes.Listar(criterios)
     End Function
 
     Public Function ObtenerPorId(clienteId As Integer) As Cliente

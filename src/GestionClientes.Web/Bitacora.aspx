@@ -1,6 +1,8 @@
 ﻿<%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Site.Master"
          CodeBehind="Bitacora.aspx.vb" Inherits="GestionClientes.Web.PaginaBitacora" %>
 
+<%@ Register TagPrefix="gc" TagName="Paginador" Src="~/Paginador.ascx" %>
+
 <asp:Content ID="contenidoBitacora" ContentPlaceHolderID="Contenido" runat="server">
 
     <h1 class="h4 mb-1 marca">Bitácora de acciones</h1>
@@ -53,25 +55,25 @@
 
             <asp:GridView ID="gvBitacora" runat="server"
                           AutoGenerateColumns="False"
-                          AllowPaging="True"
-                          PageSize="15"
+                          AllowSorting="True"
                           CssClass="table table-hover tabla-datos align-middle mb-0"
                           GridLines="None"
                           EmptyDataText="No hay registros que coincidan con los filtros."
                           UseAccessibleHeader="True">
                 <HeaderStyle CssClass="table-light" />
-                <PagerStyle CssClass="pt-3" />
                 <Columns>
                     <asp:BoundField DataField="BitacoraId"    HeaderText="#" />
                     <asp:BoundField DataField="FechaHora"     HeaderText="Fecha y hora"
-                                    DataFormatString="{0:dd/MM/yyyy HH:mm:ss}" />
-                    <asp:BoundField DataField="Accion"        HeaderText="Acción" />
+                                    DataFormatString="{0:dd/MM/yyyy HH:mm:ss}" SortExpression="FechaHora" />
+                    <asp:BoundField DataField="Accion"        HeaderText="Acción" SortExpression="Accion" />
                     <asp:BoundField DataField="ClienteId"     HeaderText="Cliente" />
-                    <asp:BoundField DataField="NombreUsuario" HeaderText="Usuario" />
+                    <asp:BoundField DataField="NombreUsuario" HeaderText="Usuario" SortExpression="NombreUsuario" />
                     <asp:BoundField DataField="Detalle"       HeaderText="Detalle"
                                     ItemStyle-CssClass="detalle-bitacora" />
                 </Columns>
             </asp:GridView>
+
+            <gc:Paginador ID="pgBitacora" runat="server" />
 
         </div>
     </div>

@@ -9,10 +9,14 @@ Imports GestionClientes.Entidades
 ''' </summary>
 Public Class BitacoraDAL
 
-    ''' <summary>Consulta la bitácora aplicando los filtros indicados.</summary>
-    Public Function Listar(filtro As FiltroBitacora) As List(Of RegistroBitacora)
-        Dim registros As New List(Of RegistroBitacora)()
+    ''' <summary>Devuelve una página de la bitácora junto con el total que cumple el filtro.</summary>
+    Public Function Listar(filtro As FiltroBitacora) As ResultadoPaginado(Of RegistroBitacora)
         Dim criterios = If(filtro, New FiltroBitacora())
+
+        Dim resultado As New ResultadoPaginado(Of RegistroBitacora) With {
+            .Pagina = criterios.Pagina,
+            .TamanoPagina = criterios.TamanoPagina
+        }
 
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Bitacora_Listar")
@@ -29,11 +33,19 @@ Public Class BitacoraDAL
                 comando.Parameters.Add("@NombreUsuario", SqlDbType.NVarChar, 50).Value =
                     If(String.IsNullOrWhiteSpace(criterios.NombreUsuario), CObj(DBNull.Value), criterios.NombreUsuario.Trim())
 
+                comando.Parameters.Add("@Orden", SqlDbType.NVarChar, 20).Value = criterios.Orden
+                comando.Parameters.Add("@Descendente", SqlDbType.Bit).Value = criterios.Descendente
+                comando.Parameters.Add("@Pagina", SqlDbType.Int).Value = criterios.Pagina
+                comando.Parameters.Add("@TamanoPagina", SqlDbType.Int).Value = criterios.TamanoPagina
+
+                Dim parametroTotal = comando.Parameters.Add("@TotalRegistros", SqlDbType.Int)
+                parametroTotal.Direction = ParameterDirection.Output
+
                 conexion.Open()
 
                 Using lector = comando.ExecuteReader()
                     While lector.Read()
-                        registros.Add(New RegistroBitacora With {
+                        resultado.Elementos.Add(New RegistroBitacora With {
                             .BitacoraId = lector.GetInt64(lector.GetOrdinal("BitacoraId")),
                             .Accion = SqlHelper.LeerTexto(lector, "Accion"),
                             .ClienteId = lector.GetInt32(lector.GetOrdinal("ClienteId")),
@@ -44,23 +56,38 @@ Public Class BitacoraDAL
                         })
                     End While
                 End Using
+
+                If parametroTotal.Value IsNot Nothing AndAlso Not Convert.IsDBNull(parametroTotal.Value) Then
+                    resultado.TotalRegistros = CInt(parametroTotal.Value)
+                End If
             End Using
         End Using
 
-        Return registros
+        Return resultado
     End Function
 
-    ''' <summary>Nombres de usuario distintos presentes en la bitácora, para poblar el filtro.</summary>
+    ''' <summary>
+    ''' Nombres de usuario distintos presentes en la bitácora, para poblar el filtro.
+    '''
+    ''' Consulta su propio procedimiento en lugar de derivar la lista de un listado paginado, que
+    ''' solo vería una página y daría un desplegable incompleto.
+    ''' </summary>
     Public Function ObtenerUsuarios() As List(Of String)
         Dim usuarios As New List(Of String)()
 
-        For Each registro In Listar(Nothing)
-            If Not usuarios.Contains(registro.NombreUsuario) Then
-                usuarios.Add(registro.NombreUsuario)
-            End If
-        Next
+        Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
+            Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Bitacora_ListarUsuarios")
 
-        usuarios.Sort()
+                conexion.Open()
+
+                Using lector = comando.ExecuteReader()
+                    While lector.Read()
+                        usuarios.Add(SqlHelper.LeerTexto(lector, "NombreUsuario"))
+                    End While
+                End Using
+            End Using
+        End Using
+
         Return usuarios
     End Function
 

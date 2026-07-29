@@ -1,6 +1,8 @@
 ﻿<%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Site.Master"
          CodeBehind="Clientes.aspx.vb" Inherits="GestionClientes.Web.PaginaClientes" %>
 
+<%@ Register TagPrefix="gc" TagName="Paginador" Src="~/Paginador.ascx" %>
+
 <asp:Content ID="contenidoClientes" ContentPlaceHolderID="Contenido" runat="server">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -34,22 +36,20 @@
             <asp:GridView ID="gvClientes" runat="server"
                           AutoGenerateColumns="False"
                           DataKeyNames="ClienteId"
-                          AllowPaging="True"
-                          PageSize="10"
+                          AllowSorting="True"
                           CssClass="table table-hover tabla-datos align-middle mb-0"
                           GridLines="None"
                           EmptyDataText="No hay clientes registrados."
                           UseAccessibleHeader="True">
                 <HeaderStyle CssClass="table-light" />
-                <PagerStyle CssClass="pt-3" />
                 <Columns>
-                    <asp:BoundField DataField="Documento"     HeaderText="Documento" />
-                    <asp:BoundField DataField="Nombres"       HeaderText="Nombres" />
-                    <asp:BoundField DataField="Apellidos"     HeaderText="Apellidos" />
+                    <asp:BoundField DataField="Documento"     HeaderText="Documento"  SortExpression="Documento" />
+                    <asp:BoundField DataField="Nombres"       HeaderText="Nombres"    SortExpression="Nombres" />
+                    <asp:BoundField DataField="Apellidos"     HeaderText="Apellidos"  SortExpression="Apellidos" />
                     <asp:BoundField DataField="Email"         HeaderText="Correo" />
                     <asp:BoundField DataField="Telefono"      HeaderText="Teléfono" />
                     <asp:BoundField DataField="FechaRegistro" HeaderText="Registro"
-                                    DataFormatString="{0:dd/MM/yyyy}" />
+                                    DataFormatString="{0:dd/MM/yyyy}" SortExpression="FechaRegistro" />
                     <asp:TemplateField HeaderText="Acciones" ItemStyle-CssClass="text-nowrap">
                         <ItemTemplate>
                             <asp:LinkButton ID="lnkEditar" runat="server"
@@ -68,6 +68,8 @@
                     </asp:TemplateField>
                 </Columns>
             </asp:GridView>
+
+            <gc:Paginador ID="pgClientes" runat="server" />
 
         </div>
     </div>

@@ -6,7 +6,7 @@ Public Class ServicioBitacora
 
     Private ReadOnly _bitacora As New BitacoraDAL()
 
-    Public Function Listar(filtro As FiltroBitacora) As List(Of RegistroBitacora)
+    Public Function Listar(filtro As FiltroBitacora) As ResultadoPaginado(Of RegistroBitacora)
         Return _bitacora.Listar(filtro)
     End Function
 

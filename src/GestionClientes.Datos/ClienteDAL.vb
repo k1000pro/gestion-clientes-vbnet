@@ -12,27 +12,50 @@ Imports GestionClientes.Entidades
 ''' </summary>
 Public Class ClienteDAL
 
-    ''' <summary>Lista clientes, opcionalmente filtrados por nombre, apellido o documento.</summary>
-    Public Function Listar(busqueda As String) As List(Of Cliente)
-        Dim clientes As New List(Of Cliente)()
+    ''' <summary>
+    ''' Devuelve una página de clientes junto con el total que cumple el filtro.
+    '''
+    ''' El parámetro de salida se lee DESPUÉS de cerrar el lector: SQL Server no entrega los
+    ''' parámetros de salida hasta que el conjunto de resultados se ha consumido por completo, así
+    ''' que leerlo antes devolvería Nothing.
+    ''' </summary>
+    Public Function Listar(criterios As CriteriosCliente) As ResultadoPaginado(Of Cliente)
+        Dim consulta = If(criterios, New CriteriosCliente())
+
+        Dim resultado As New ResultadoPaginado(Of Cliente) With {
+            .Pagina = consulta.Pagina,
+            .TamanoPagina = consulta.TamanoPagina
+        }
 
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Cliente_Listar")
 
-                Dim parametro = comando.Parameters.Add("@Busqueda", SqlDbType.NVarChar, 100)
-                parametro.Value = If(String.IsNullOrWhiteSpace(busqueda), CObj(DBNull.Value), busqueda.Trim())
+                comando.Parameters.Add("@Busqueda", SqlDbType.NVarChar, 100).Value =
+                    If(String.IsNullOrWhiteSpace(consulta.Busqueda), CObj(DBNull.Value), consulta.Busqueda.Trim())
+
+                comando.Parameters.Add("@Orden", SqlDbType.NVarChar, 20).Value = consulta.Orden
+                comando.Parameters.Add("@Descendente", SqlDbType.Bit).Value = consulta.Descendente
+                comando.Parameters.Add("@Pagina", SqlDbType.Int).Value = consulta.Pagina
+                comando.Parameters.Add("@TamanoPagina", SqlDbType.Int).Value = consulta.TamanoPagina
+
+                Dim parametroTotal = comando.Parameters.Add("@TotalRegistros", SqlDbType.Int)
+                parametroTotal.Direction = ParameterDirection.Output
 
                 conexion.Open()
 
                 Using lector = comando.ExecuteReader()
                     While lector.Read()
-                        clientes.Add(Mapear(lector))
+                        resultado.Elementos.Add(Mapear(lector))
                     End While
                 End Using
+
+                If parametroTotal.Value IsNot Nothing AndAlso Not Convert.IsDBNull(parametroTotal.Value) Then
+                    resultado.TotalRegistros = CInt(parametroTotal.Value)
+                End If
             End Using
         End Using
 
-        Return clientes
+        Return resultado
     End Function
 
     ''' <summary>Obtiene un cliente por su identificador. Devuelve Nothing si no existe.</summary>

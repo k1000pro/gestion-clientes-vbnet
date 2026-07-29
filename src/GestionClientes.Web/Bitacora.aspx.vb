@@ -8,6 +8,42 @@ Public Class PaginaBitacora
 
     Private ReadOnly _bitacora As New ServicioBitacora()
 
+    ''' <summary>Tamaño de página de la bitácora.</summary>
+    Private Const TamanoPaginaBitacora As Integer = 15
+
+    Private Property PaginaActual As Integer
+        Get
+            Dim valor = ViewState("PaginaActual")
+            If valor Is Nothing Then Return 1
+            Return CInt(valor)
+        End Get
+        Set(value As Integer)
+            ViewState("PaginaActual") = value
+        End Set
+    End Property
+
+    Private Property OrdenActual As String
+        Get
+            Dim valor = TryCast(ViewState("OrdenActual"), String)
+            If String.IsNullOrEmpty(valor) Then Return "FechaHora"
+            Return valor
+        End Get
+        Set(value As String)
+            ViewState("OrdenActual") = value
+        End Set
+    End Property
+
+    Private Property DescendenteActual As Boolean
+        Get
+            Dim valor = ViewState("DescendenteActual")
+            If valor Is Nothing Then Return True
+            Return CBool(valor)
+        End Get
+        Set(value As Boolean)
+            ViewState("DescendenteActual") = value
+        End Set
+    End Property
+
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         If Not IsPostBack Then
             CargarUsuarios()
@@ -29,8 +65,36 @@ Public Class PaginaBitacora
         Dim filtro = ConstruirFiltro()
         If filtro Is Nothing Then Return
 
-        gvBitacora.DataSource = _bitacora.Listar(filtro)
+        filtro.Orden = OrdenActual
+        filtro.Descendente = DescendenteActual
+        filtro.Pagina = PaginaActual
+        filtro.TamanoPagina = TamanoPaginaBitacora
+
+        Dim resultado = _bitacora.Listar(filtro)
+
+        gvBitacora.DataSource = resultado.Elementos
         gvBitacora.DataBind()
+
+        pgBitacora.Configurar(resultado)
+    End Sub
+
+    Protected Sub pgBitacora_PaginaCambiada(sender As Object, e As PaginaCambiadaEventArgs) Handles pgBitacora.PaginaCambiada
+        PaginaActual = e.Pagina
+        CargarBitacora()
+    End Sub
+
+    Protected Sub gvBitacora_Sorting(sender As Object, e As GridViewSortEventArgs) Handles gvBitacora.Sorting
+        If String.IsNullOrEmpty(e.SortExpression) Then Return
+
+        If String.Equals(e.SortExpression, OrdenActual, StringComparison.Ordinal) Then
+            DescendenteActual = Not DescendenteActual
+        Else
+            OrdenActual = e.SortExpression
+            DescendenteActual = False
+        End If
+
+        PaginaActual = 1
+        CargarBitacora()
     End Sub
 
     ''' <summary>
@@ -65,7 +129,7 @@ Public Class PaginaBitacora
     End Function
 
     Protected Sub btnFiltrar_Click(sender As Object, e As EventArgs) Handles btnFiltrar.Click
-        gvBitacora.PageIndex = 0
+        PaginaActual = 1
         CargarBitacora()
     End Sub
 
@@ -74,12 +138,7 @@ Public Class PaginaBitacora
         txtFechaHasta.Text = String.Empty
         ddlAccion.SelectedIndex = 0
         ddlUsuario.SelectedIndex = 0
-        gvBitacora.PageIndex = 0
-        CargarBitacora()
-    End Sub
-
-    Protected Sub gvBitacora_PageIndexChanging(sender As Object, e As GridViewPageEventArgs) Handles gvBitacora.PageIndexChanging
-        gvBitacora.PageIndex = e.NewPageIndex
+        PaginaActual = 1
         CargarBitacora()
     End Sub
 

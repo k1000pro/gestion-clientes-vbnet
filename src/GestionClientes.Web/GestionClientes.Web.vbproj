@@ -79,6 +79,7 @@
     <Content Include="Login.aspx" />
     <Content Include="Clientes.aspx" />
     <Content Include="Bitacora.aspx" />
+    <Content Include="Paginador.ascx" />
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\sitio.css" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
@@ -124,6 +125,13 @@
     </Compile>
     <Compile Include="Bitacora.aspx.designer.vb">
       <DependentUpon>Bitacora.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Paginador.ascx.vb">
+      <DependentUpon>Paginador.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Paginador.ascx.designer.vb">
+      <DependentUpon>Paginador.ascx</DependentUpon>
     </Compile>
   </ItemGroup>
 

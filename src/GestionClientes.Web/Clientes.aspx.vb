@@ -7,31 +7,109 @@ Public Class PaginaClientes
 
     Private ReadOnly _clientes As New ServicioCliente()
 
+    ''' <summary>Tamaño de página del listado de clientes.</summary>
+    Private Const TamanoPaginaClientes As Integer = 10
+
+    ''' <summary>
+    ''' Criterios actuales del listado. Viven en ViewState y no en campos de la clase porque una
+    ''' instancia de página no sobrevive al postback.
+    ''' </summary>
+    Private Property PaginaActual As Integer
+        Get
+            Dim valor = ViewState("PaginaActual")
+            If valor Is Nothing Then Return 1
+            Return CInt(valor)
+        End Get
+        Set(value As Integer)
+            ViewState("PaginaActual") = value
+        End Set
+    End Property
+
+    Private Property OrdenActual As String
+        Get
+            Dim valor = TryCast(ViewState("OrdenActual"), String)
+            If String.IsNullOrEmpty(valor) Then Return "Apellidos"
+            Return valor
+        End Get
+        Set(value As String)
+            ViewState("OrdenActual") = value
+        End Set
+    End Property
+
+    Private Property DescendenteActual As Boolean
+        Get
+            Dim valor = ViewState("DescendenteActual")
+            If valor Is Nothing Then Return False
+            Return CBool(valor)
+        End Get
+        Set(value As Boolean)
+            ViewState("DescendenteActual") = value
+        End Set
+    End Property
+
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         If Not IsPostBack Then
             CargarClientes()
         End If
     End Sub
 
-    ''' <summary>Carga la rejilla aplicando el texto de búsqueda actual.</summary>
     Private Sub CargarClientes()
-        gvClientes.DataSource = _clientes.Listar(txtBusqueda.Text)
+        Dim criterios As New CriteriosCliente With {
+            .Busqueda = txtBusqueda.Text,
+            .Orden = OrdenActual,
+            .Descendente = DescendenteActual,
+            .Pagina = PaginaActual,
+            .TamanoPagina = TamanoPaginaClientes
+        }
+
+        Dim resultado = _clientes.Listar(criterios)
+
+        ' Si se borró el último registro de la última página, la página actual queda fuera de
+        ' rango y la rejilla saldría vacía con datos existentes detrás. Se retrocede y se repite.
+        If resultado.Elementos.Count = 0 AndAlso resultado.TotalRegistros > 0 AndAlso PaginaActual > 1 Then
+            PaginaActual = resultado.TotalPaginas
+            criterios.Pagina = PaginaActual
+            resultado = _clientes.Listar(criterios)
+        End If
+
+        gvClientes.DataSource = resultado.Elementos
         gvClientes.DataBind()
+
+        pgClientes.Configurar(resultado)
+    End Sub
+
+    Protected Sub pgClientes_PaginaCambiada(sender As Object, e As PaginaCambiadaEventArgs) Handles pgClientes.PaginaCambiada
+        PaginaActual = e.Pagina
+        CargarClientes()
+    End Sub
+
+    ''' <summary>
+    ''' Reordena por la columna pulsada. Pulsar la misma columna invierte la dirección; cambiar de
+    ''' columna vuelve a ascendente y a la primera página, porque la fila que se estaba viendo ya
+    ''' no está donde estaba.
+    ''' </summary>
+    Protected Sub gvClientes_Sorting(sender As Object, e As GridViewSortEventArgs) Handles gvClientes.Sorting
+        If String.IsNullOrEmpty(e.SortExpression) Then Return
+
+        If String.Equals(e.SortExpression, OrdenActual, StringComparison.Ordinal) Then
+            DescendenteActual = Not DescendenteActual
+        Else
+            OrdenActual = e.SortExpression
+            DescendenteActual = False
+        End If
+
+        PaginaActual = 1
+        CargarClientes()
     End Sub
 
     Protected Sub btnBuscar_Click(sender As Object, e As EventArgs) Handles btnBuscar.Click
-        gvClientes.PageIndex = 0
+        PaginaActual = 1
         CargarClientes()
     End Sub
 
     Protected Sub btnLimpiarBusqueda_Click(sender As Object, e As EventArgs) Handles btnLimpiarBusqueda.Click
         txtBusqueda.Text = String.Empty
-        gvClientes.PageIndex = 0
-        CargarClientes()
-    End Sub
-
-    Protected Sub gvClientes_PageIndexChanging(sender As Object, e As GridViewPageEventArgs) Handles gvClientes.PageIndexChanging
-        gvClientes.PageIndex = e.NewPageIndex
+        PaginaActual = 1
         CargarClientes()
     End Sub
 
@@ -91,7 +169,9 @@ Public Class PaginaClientes
         MostrarMensaje(resultado.PrimerMensaje, resultado.Exitoso)
         pnlFormulario.Visible = False
         LimpiarFormulario()
-        gvClientes.PageIndex = 0
+        ' No se reinicia PaginaActual aqui: si la fila borrada era la unica de la ultima
+        ' pagina, el reajuste dentro de CargarClientes necesita ver la pagina fuera de rango
+        ' para retroceder. Forzar la pagina 1 en cada borrado anularia ese caso de borde.
         CargarClientes()
     End Sub
 
