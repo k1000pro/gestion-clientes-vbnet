@@ -31,9 +31,9 @@ Ejecutar `database/01_CrearBaseDatos.sql` en SSMS, o desde la línea de comandos
 sqlcmd -S .\SQLEXPRESS -E -i database\01_CrearBaseDatos.sql
 ```
 
-El script crea la base `GestionClientesDB`, las tablas `Usuarios`, `Clientes` y `Bitacora`, los
-procedimientos almacenados y el usuario administrador inicial. Es idempotente: puede ejecutarse
-varias veces sin duplicar datos.
+El script crea la base `GestionClientesDB`, las tablas `Usuarios`, `Clientes` y `Bitacora`, dos
+funciones, los procedimientos almacenados y el usuario administrador inicial. Es idempotente:
+puede ejecutarse varias veces sin duplicar datos.
 
 ### 2. Cadena de conexión
 
@@ -57,7 +57,9 @@ Ajustar `Data Source` si la instancia no es `.\SQLEXPRESS`.
 ### 3. Ejecutar
 
 Abrir `src/GestionClientes.sln` en Visual Studio 2022, establecer `GestionClientes.Web` como
-proyecto de inicio y ejecutar con F5.
+proyecto de inicio y ejecutar con F5. La aplicación abre en `http://localhost:8080/`. Si ese
+puerto ya está en uso, Visual Studio lo informa; puede cambiarse en las propiedades web del
+proyecto.
 
 ### Credenciales de acceso
 
@@ -169,6 +171,24 @@ dependencias. El nombre se inserta con `textContent` y no con `innerHTML`.
 cinco archivos y permite cambiar destino y nivel sin recompilar. Registra los intentos de inicio
 de sesión fallidos con el nombre de usuario intentado, nunca con la contraseña.
 
+**Arranque reproducible.** El puerto y la URL de IIS Express viven en el archivo de proyecto
+versionado en lugar del `.user`, que está ignorado. Cualquiera que clone el repositorio y presione
+F5 abre en la misma dirección, sin depender de un perfil de arranque local.
+
+**Respuesta entendible ante contenido no permitido.** La validación de petición de ASP.NET
+rechaza entradas que parecen marcado; la aplicación ahora explica el motivo en lugar de mostrar
+una página de error genérica. La validación no se relajó en ningún punto: no hay
+`validateRequest="false"` y `requestValidationMode` no se tocó.
+
+**Indicador de ordenamiento.** La cabecera de la rejilla muestra por qué columna se está
+ordenando y en qué dirección, con una flecha y el atributo `aria-sort`.
+
+**Filtro de listados en funciones en línea.** El predicado de filtro se escribe una sola vez, en
+una función de tabla en línea, y lo comparten la consulta de conteo y la de página: un paginador
+que no coincida con lo que muestra la rejilla deja de ser posible. La función es en línea (no
+multiinstrucción) para que el optimizador la expanda dentro del plan de ejecución en lugar de
+materializar un resultado intermedio.
+
 ## Seguridad
 
 - **Inyección SQL:** todo el acceso a datos usa procedimientos almacenados invocados con
@@ -194,3 +214,5 @@ de sesión fallidos con el nombre de usuario intentado, nunca con la contraseña
   diseño).
 - **Sin `<machineKey>` fijo:** decisión deliberada por tratarse de un repositorio público (ver
   Decisiones de diseño).
+- **Validación de petición:** permanece activa; el contenido que rechaza se explica al usuario en
+  lugar de suprimirse o relajar la validación.

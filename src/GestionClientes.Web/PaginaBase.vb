@@ -38,4 +38,31 @@ Public Class PaginaBase
         End Get
     End Property
 
+    ''' <summary>
+    ''' Marca la cabecera por la que se está ordenando con una flecha de dirección. Vive aquí y no
+    ''' en cada página porque las dos rejillas necesitan exactamente el mismo comportamiento.
+    '''
+    ''' Se invoca desde RowCreated y no desde RowDataBound: la fila de encabezado no se enlaza a
+    ''' datos, así que RowDataBound no se dispara para ella.
+    ''' </summary>
+    Protected Shared Sub MarcarCabeceraOrdenada(fila As GridViewRow, orden As String, descendente As Boolean)
+        If fila Is Nothing OrElse fila.RowType <> DataControlRowType.Header Then Return
+
+        For Each celda As TableCell In fila.Cells
+            If celda.Controls.Count = 0 Then Continue For
+
+            Dim enlace = TryCast(celda.Controls(0), LinkButton)
+            If enlace Is Nothing Then Continue For
+
+            If Not String.Equals(If(enlace.CommandArgument, String.Empty), orden, StringComparison.Ordinal) Then Continue For
+
+            celda.Attributes("aria-sort") = If(descendente, "descending", "ascending")
+
+            celda.Controls.Add(New Literal With {
+                .Text = If(descendente, "<span class=""orden-indicador"">&#9660;</span>",
+                                        "<span class=""orden-indicador"">&#9650;</span>")
+            })
+        Next
+    End Sub
+
 End Class

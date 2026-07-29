@@ -16,7 +16,14 @@ Public Class PaginaError
         "Corrija el dato y vuelva a intentarlo."
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Dim esContenidoNoPermitido = String.Equals(Request.QueryString("motivo"), "contenido", StringComparison.Ordinal)
+        ' El motivo solo se acepta cuando la página se alcanzó por redirección explícita. En la
+        ' ruta de customErrors, que usa ResponseRewrite, esta página se ejecuta dentro de la
+        ' petición original y vería su cadena de consulta, no la nuestra.
+        Dim esRedireccionExplicita = Server.GetLastError() Is Nothing
+
+        Dim esContenidoNoPermitido =
+            esRedireccionExplicita AndAlso
+            String.Equals(Request.QueryString("motivo"), "contenido", StringComparison.Ordinal)
 
         litMensaje.Text = HttpUtility.HtmlEncode(
             If(esContenidoNoPermitido, MensajeContenidoNoPermitido, MensajeGenerico))
