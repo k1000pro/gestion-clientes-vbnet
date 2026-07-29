@@ -55,4 +55,8 @@ Partial Public Class PaginaClientes
 
     Protected WithEvents btnCancelar As Global.System.Web.UI.WebControls.Button
 
+    Protected WithEvents btnConfirmarEliminar As Global.System.Web.UI.WebControls.Button
+
+    Protected WithEvents hdnClienteAEliminar As Global.System.Web.UI.WebControls.HiddenField
+
 End Class

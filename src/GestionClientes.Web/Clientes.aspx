@@ -58,12 +58,12 @@
                                             CssClass="btn btn-sm btn-outline-primary"
                                             CausesValidation="False">Editar</asp:LinkButton>
 
-                            <asp:LinkButton ID="lnkEliminar" runat="server"
-                                            CommandName="EliminarCliente"
-                                            CommandArgument='<%# Eval("ClienteId") %>'
-                                            CssClass="btn btn-sm btn-outline-danger"
-                                            CausesValidation="False"
-                                            OnClientClick="return confirm('¿Confirma que desea eliminar este cliente? Esta acción no se puede deshacer.');">Eliminar</asp:LinkButton>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEliminar"
+                                    data-cliente-id='<%# Eval("ClienteId") %>'
+                                    data-cliente-nombre='<%# NombreParaAtributo(Container.DataItem) %>'>Eliminar</button>
                         </ItemTemplate>
                     </asp:TemplateField>
                 </Columns>
@@ -158,5 +158,36 @@
 
         </div>
     </asp:Panel>
+
+    <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="tituloModalEliminar" aria-hidden="true"
+         data-campo-id="<%= hdnClienteAEliminar.ClientID %>">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="tituloModalEliminar">Confirmar eliminación</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-0">
+                        ¿Confirma que desea eliminar a <strong id="nombreClienteAEliminar"></strong>?
+                    </p>
+                    <p class="text-muted small mb-0 mt-2">Esta acción no se puede deshacer.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <asp:Button ID="btnConfirmarEliminar" runat="server" Text="Eliminar"
+                                CssClass="btn btn-danger" CausesValidation="False" />
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <asp:HiddenField ID="hdnClienteAEliminar" runat="server" />
+
+    <script src="<%= ResolveUrl("~/Scripts/confirmacion.js") %>"></script>
 
 </asp:Content>

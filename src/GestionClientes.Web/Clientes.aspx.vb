@@ -135,8 +135,6 @@ Public Class PaginaClientes
         Select Case e.CommandName
             Case "EditarCliente"
                 CargarParaEdicion(clienteId)
-            Case "EliminarCliente"
-                EliminarCliente(clienteId)
         End Select
     End Sub
 
@@ -260,5 +258,33 @@ Public Class PaginaClientes
         pnlMensaje.Visible = False
         litMensaje.Text = String.Empty
     End Sub
+
+    ''' <summary>
+    ''' Confirma el borrado. El identificador llega del campo oculto que rellenó el modal, y se
+    ''' valida igual que cualquier otra entrada: el diálogo es comodidad de interfaz, no control.
+    ''' </summary>
+    Protected Sub btnConfirmarEliminar_Click(sender As Object, e As EventArgs) Handles btnConfirmarEliminar.Click
+        Dim clienteId As Integer
+
+        If Not Integer.TryParse(hdnClienteAEliminar.Value, clienteId) Then
+            MostrarMensaje("No se indicó el cliente a eliminar.", False)
+            Return
+        End If
+
+        hdnClienteAEliminar.Value = String.Empty
+        EliminarCliente(clienteId)
+    End Sub
+
+    ''' <summary>
+    ''' Prepara el nombre del cliente para viajar dentro de un atributo HTML delimitado por
+    ''' comillas simples. HtmlAttributeEncode no escapa el apóstrofo, así que se hace aparte: un
+    ''' apellido como O'Brien cerraría el atributo antes de tiempo.
+    ''' </summary>
+    Protected Function NombreParaAtributo(elemento As Object) As String
+        Dim cliente = TryCast(elemento, Cliente)
+        If cliente Is Nothing Then Return String.Empty
+
+        Return HttpUtility.HtmlAttributeEncode(cliente.NombreCompleto).Replace("'", "&#39;")
+    End Function
 
 End Class
