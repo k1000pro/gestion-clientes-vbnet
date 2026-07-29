@@ -24,7 +24,11 @@ Public Class SiteMaster
         Dim nombreCompleto = TryCast(Session(PaginaBase.ClaveNombreCompleto), String)
         If Not String.IsNullOrWhiteSpace(nombreCompleto) Then Return nombreCompleto
 
-        If Page.User IsNot Nothing AndAlso Page.User.Identity IsNot Nothing Then Return Page.User.Identity.Name
+        ' Se accede a través de Page.User y no de User a secas: MasterPage no expone la propiedad
+        ' User, solo la expone Page. Escribirlo sin el prefijo no compila (BC30451).
+        If Page.User IsNot Nothing AndAlso Page.User.Identity IsNot Nothing Then
+            Return Page.User.Identity.Name
+        End If
 
         Return String.Empty
     End Function
