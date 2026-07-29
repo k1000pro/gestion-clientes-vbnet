@@ -10,10 +10,6 @@ Public Class PaginaLogin
     ''' <summary>Vincula el ViewState a la sesión para proteger el postback del login.</summary>
     Protected Overrides Sub OnInit(e As EventArgs)
         ViewStateUserKey = Session.SessionID
-        ' El proyecto no incluye jQuery, así que el modo de validación "unobtrusive" (que lo
-        ' requiere mediante un ScriptResourceMapping) fallaría en tiempo de ejecución. Se usa el
-        ' script de validación clásico, incluido como recurso embebido en System.Web.
-        Me.UnobtrusiveValidationMode = UnobtrusiveValidationMode.None
         MyBase.OnInit(e)
     End Sub
 
