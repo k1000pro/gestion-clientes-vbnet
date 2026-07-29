@@ -77,6 +77,7 @@
     <Content Include="Site.Master" />
     <Content Include="Error.aspx" />
     <Content Include="Login.aspx" />
+    <Content Include="Clientes.aspx" />
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\sitio.css" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
@@ -107,6 +108,13 @@
     </Compile>
     <Compile Include="Login.aspx.designer.vb">
       <DependentUpon>Login.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Clientes.aspx.vb">
+      <DependentUpon>Clientes.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Clientes.aspx.designer.vb">
+      <DependentUpon>Clientes.aspx</DependentUpon>
     </Compile>
   </ItemGroup>
 
