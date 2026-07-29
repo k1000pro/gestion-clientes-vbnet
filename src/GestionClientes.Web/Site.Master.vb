@@ -18,6 +18,7 @@ Public Class SiteMaster
         Session.Clear()
         Session.Abandon()
         Response.Redirect(FormsAuthentication.LoginUrl, False)
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 
     ''' <summary>

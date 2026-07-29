@@ -12,6 +12,14 @@ Public Class PaginaBase
     ''' </summary>
     Protected Overrides Sub OnInit(e As EventArgs)
         ViewStateUserKey = Session.SessionID
+
+        ' Las páginas autenticadas no se guardan en la caché del navegador. Sin esto, el botón
+        ' Atrás sigue mostrando los datos del cliente después de cerrar sesión: la autorización
+        ' impide cualquier postback, pero la información ya está en pantalla.
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
+        Response.Cache.SetExpires(DateTime.UtcNow.AddDays(-1))
+
         MyBase.OnInit(e)
     End Sub
 

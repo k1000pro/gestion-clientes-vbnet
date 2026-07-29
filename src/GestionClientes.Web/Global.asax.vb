@@ -15,8 +15,9 @@ Public Class Global_asax
     End Sub
 
     ''' <summary>
-    ''' Registra las excepciones no controladas en App_Data\errores.log. El usuario solo ve la
-    ''' página de error genérica: el detalle técnico nunca llega al navegador.
+    ''' Registra las excepciones no controladas en App_Data\errores.log. Con customErrors en
+    ''' RemoteOnly, un cliente remoto solo ve la página de error genérica; en la máquina local se
+    ''' conserva el detalle para diagnosticar. El registro es la fuente fiable en ambos casos.
     ''' </summary>
     Sub Application_Error(sender As Object, e As EventArgs)
         Dim excepcion = Server.GetLastError()

@@ -129,11 +129,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GestionClientes.Entidades\GestionClientes.Entidades.vbproj">
-      <Project>{A1E4C8D2-3F76-4B95-8E20-6D1A47C5F930}</Project>
+      <Project>{A9A2911E-8A9C-4576-9F7A-393D58DE557F}</Project>
       <Name>GestionClientes.Entidades</Name>
     </ProjectReference>
     <ProjectReference Include="..\GestionClientes.Negocio\GestionClientes.Negocio.vbproj">
-      <Project>{C7B92A5E-84D1-4F63-B0A7-2E5F81D4C6A8}</Project>
+      <Project>{CEC3BE0B-C8F6-44CF-B309-A15B43738250}</Project>
       <Name>GestionClientes.Negocio</Name>
     </ProjectReference>
   </ItemGroup>

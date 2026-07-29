@@ -3,7 +3,7 @@
 Aplicación web para el mantenimiento de información de clientes con control de acceso y
 bitácora de auditoría.
 
-Prueba técnica — Kamilo Martinez
+Prueba técnica — Kamilo Martínez
 
 ## Tecnologías
 
@@ -17,7 +17,7 @@ Prueba técnica — Kamilo Martinez
 
 - Visual Studio 2022 con la carga de trabajo **Desarrollo de ASP.NET y web**
 - .NET Framework 4.8 Developer Pack
-- SQL Server 2016 o superior (el script usa `CREATE OR ALTER`, `THROW` y `FOR JSON`)
+- SQL Server 2016 SP1 o superior (el script usa `CREATE OR ALTER`, `THROW` y `FOR JSON`)
 - SQL Server Management Studio (opcional, para inspeccionar los datos)
 
 ## Instalación
@@ -150,8 +150,10 @@ por configuración del servidor.
   iteraciones de PBKDF2 revelaría qué cuentas existen.
 - **XSS:** los datos se renderizan con controles que codifican HTML; los mensajes se codifican
   de forma explícita.
-- **Fuga de información:** `customErrors` redirige a una página genérica y el detalle de la
-  excepción se registra en `App_Data/errores.log`, nunca se envía al navegador.
+- **Fuga de información:** `customErrors` está en `RemoteOnly`: un cliente remoto solo recibe la
+  página genérica, mientras que en la máquina local se conserva el detalle para poder
+  diagnosticar. En ambos casos la excepción completa queda registrada en
+  `App_Data/errores.log`, que es donde debe consultarse.
 - **Identidad en el ticket, no en la sesión:** el identificador del usuario viaja en el `UserData`
   del ticket de autenticación, firmado y cifrado, en lugar de en `Session` (ver Decisiones de
   diseño).

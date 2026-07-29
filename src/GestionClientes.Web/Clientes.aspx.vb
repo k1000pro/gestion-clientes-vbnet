@@ -91,6 +91,7 @@ Public Class PaginaClientes
         MostrarMensaje(resultado.PrimerMensaje, resultado.Exitoso)
         pnlFormulario.Visible = False
         LimpiarFormulario()
+        gvClientes.PageIndex = 0
         CargarClientes()
     End Sub
 

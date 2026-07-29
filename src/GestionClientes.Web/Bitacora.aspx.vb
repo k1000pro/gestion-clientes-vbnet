@@ -1,4 +1,5 @@
-﻿Imports GestionClientes.Entidades
+﻿Imports System.Globalization
+Imports GestionClientes.Entidades
 Imports GestionClientes.Negocio
 
 ''' <summary>Consulta de solo lectura de la bitácora de auditoría.</summary>
@@ -43,10 +44,14 @@ Public Class PaginaBitacora
         }
 
         Dim desde As Date
-        If Date.TryParse(txtFechaDesde.Text, desde) Then filtro.FechaDesde = desde
+        If Date.TryParse(txtFechaDesde.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, desde) Then
+            filtro.FechaDesde = desde
+        End If
 
         Dim hasta As Date
-        If Date.TryParse(txtFechaHasta.Text, hasta) Then filtro.FechaHasta = hasta
+        If Date.TryParse(txtFechaHasta.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, hasta) Then
+            filtro.FechaHasta = hasta
+        End If
 
         If filtro.FechaDesde.HasValue AndAlso filtro.FechaHasta.HasValue AndAlso
            filtro.FechaDesde.Value > filtro.FechaHasta.Value Then

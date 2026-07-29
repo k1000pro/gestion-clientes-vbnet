@@ -55,6 +55,8 @@ Public Class PaginaLogin
         Session.Abandon()
         Response.Cookies.Add(New HttpCookie("ASP.NET_SessionId", String.Empty))
 
+        ' El primer argumento es la versión del formato del ticket: es informativo y no afecta al
+        ' cifrado ni a la validación.
         Dim ticket As New FormsAuthenticationTicket(
             2,
             nombreUsuario,
