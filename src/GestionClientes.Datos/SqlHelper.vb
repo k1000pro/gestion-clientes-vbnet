@@ -17,6 +17,7 @@ Friend NotInheritable Class SqlHelper
     ''' <summary>Errores personalizados definidos en los procedimientos almacenados.</summary>
     Private Const ErrorDocumentoDuplicado As Integer = 50001
     Private Const ErrorClienteNoEncontrado As Integer = 50002
+    Private Const ErrorConflictoConcurrencia As Integer = 50003
 
     ''' <summary>Violaciones de unicidad que reporta el propio motor.</summary>
     Private Const ErrorIndiceUnicoDuplicado As Integer = 2601
@@ -59,7 +60,7 @@ Friend NotInheritable Class SqlHelper
     Friend Shared Function Traducir(ex As SqlException) As Exception
         Select Case ex.Number
 
-            Case ErrorDocumentoDuplicado, ErrorClienteNoEncontrado
+            Case ErrorDocumentoDuplicado, ErrorClienteNoEncontrado, ErrorConflictoConcurrencia
                 ' Errores que los procedimientos lanzan a propósito: su mensaje ya está
                 ' redactado para el usuario final.
                 Return New ReglaNegocioException(ex.Message)

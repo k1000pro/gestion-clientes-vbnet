@@ -82,6 +82,7 @@
             </h2>
 
             <asp:HiddenField ID="hdnClienteId" runat="server" Value="0" />
+            <asp:HiddenField ID="hdnRowVersion" runat="server" />
 
             <div class="row g-3">
 

@@ -25,6 +25,8 @@ Partial Public Class PaginaClientes
 
     Protected WithEvents hdnClienteId As Global.System.Web.UI.WebControls.HiddenField
 
+    Protected WithEvents hdnRowVersion As Global.System.Web.UI.WebControls.HiddenField
+
     Protected WithEvents txtNombres As Global.System.Web.UI.WebControls.TextBox
 
     Protected WithEvents valNombres As Global.System.Web.UI.WebControls.RequiredFieldValidator

@@ -71,6 +71,7 @@ BEGIN
         Telefono      NVARCHAR(20)   NULL,
         Direccion     NVARCHAR(250)  NULL,
         FechaRegistro DATETIME2(0)   NOT NULL CONSTRAINT DF_Clientes_FechaRegistro DEFAULT (SYSDATETIME()),
+        [RowVersion]  ROWVERSION     NOT NULL,
         CONSTRAINT PK_Clientes PRIMARY KEY CLUSTERED (ClienteId)
     );
 
@@ -83,6 +84,18 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes
 BEGIN
     CREATE UNIQUE INDEX UX_Clientes_Documento ON dbo.Clientes (Documento);
     PRINT 'Indice UX_Clientes_Documento creado.';
+END
+GO
+
+/*
+    Migración para bases creadas antes de que existiera el control de concurrencia. Quien ya haya
+    ejecutado este script obtiene la columna sin perder datos; quien lo ejecute desde cero la
+    obtiene en el CREATE TABLE. SQL Server rellena el valor inicial de cada fila existente.
+*/
+IF COL_LENGTH('dbo.Clientes', 'RowVersion') IS NULL
+BEGIN
+    ALTER TABLE dbo.Clientes ADD [RowVersion] ROWVERSION NOT NULL;
+    PRINT 'Columna RowVersion agregada a Clientes.';
 END
 GO
 
@@ -202,7 +215,8 @@ BEGIN
             Email,
             Telefono,
             Direccion,
-            FechaRegistro
+            FechaRegistro,
+            [RowVersion]
     FROM    dbo.Clientes
     WHERE   @SinFiltro = 1
             OR Nombres   LIKE @Patron
@@ -238,7 +252,8 @@ BEGIN
             Email,
             Telefono,
             Direccion,
-            FechaRegistro
+            FechaRegistro,
+            [RowVersion]
     FROM    dbo.Clientes
     WHERE   ClienteId = @ClienteId;
 END
@@ -297,7 +312,12 @@ END
 GO
 
 /*
-    Actualiza un cliente y registra en bitácora el estado anterior y el nuevo.
+    Actualiza un cliente y registra el cambio en la bitácora, en la misma transacción.
+
+    El UPDATE filtra además por RowVersion. Si otra sesión modificó la fila desde que este usuario
+    la cargó, el valor ya no coincide, no se actualiza ninguna fila y se lanza 50003. Sin esa
+    comparación, el segundo en guardar sobrescribe el cambio del primero con los valores que tenía
+    en pantalla, y nadie se entera.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Actualizar
     @ClienteId     INT,
@@ -308,7 +328,8 @@ CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Actualizar
     @Telefono      NVARCHAR(20)  = NULL,
     @Direccion     NVARCHAR(250) = NULL,
     @UsuarioId     INT,
-    @NombreUsuario NVARCHAR(50)
+    @NombreUsuario NVARCHAR(50),
+    @RowVersion    BINARY(8)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -338,7 +359,11 @@ BEGIN
                 Email     = @Email,
                 Telefono  = @Telefono,
                 Direccion = @Direccion
-        WHERE   ClienteId = @ClienteId;
+        WHERE   ClienteId = @ClienteId
+                AND [RowVersion] = @RowVersion;
+
+        IF @@ROWCOUNT = 0
+            THROW 50003, 'Este cliente fue modificado por otro usuario mientras usted lo editaba. Vuelva a abrirlo para ver los datos actuales.', 1;
 
         DECLARE @Nuevo NVARCHAR(MAX) =
         (

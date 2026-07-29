@@ -109,6 +109,10 @@ Public Class ClienteDAL
                 AgregarParametrosDeCliente(comando, cliente)
                 AgregarParametrosDeAuditoria(comando, usuarioId, nombreUsuario)
 
+                comando.Parameters.Add("@RowVersion", SqlDbType.Binary, 8).Value =
+                    If(cliente.RowVersion Is Nothing OrElse cliente.RowVersion.Length = 0,
+                       CObj(DBNull.Value), cliente.RowVersion)
+
                 Try
                     conexion.Open()
                     comando.ExecuteNonQuery()
@@ -168,7 +172,8 @@ Public Class ClienteDAL
             .Email = SqlHelper.LeerTexto(lector, "Email"),
             .Telefono = SqlHelper.LeerTexto(lector, "Telefono"),
             .Direccion = SqlHelper.LeerTexto(lector, "Direccion"),
-            .FechaRegistro = lector.GetDateTime(lector.GetOrdinal("FechaRegistro"))
+            .FechaRegistro = lector.GetDateTime(lector.GetOrdinal("FechaRegistro")),
+            .RowVersion = SqlHelper.LeerBytes(lector, "RowVersion")
         }
     End Function
 

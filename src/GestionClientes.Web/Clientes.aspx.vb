@@ -151,6 +151,8 @@ Public Class PaginaClientes
         End If
 
         hdnClienteId.Value = cliente.ClienteId.ToString()
+        hdnRowVersion.Value = If(cliente.RowVersion Is Nothing, String.Empty,
+                                 Convert.ToBase64String(cliente.RowVersion))
         txtNombres.Text = cliente.Nombres
         txtApellidos.Text = cliente.Apellidos
         txtDocumento.Text = cliente.Documento
@@ -190,7 +192,8 @@ Public Class PaginaClientes
             .Documento = txtDocumento.Text.Trim(),
             .Email = txtEmail.Text.Trim(),
             .Telefono = txtTelefono.Text.Trim(),
-            .Direccion = txtDireccion.Text.Trim()
+            .Direccion = txtDireccion.Text.Trim(),
+            .RowVersion = LeerRowVersionDelFormulario()
         }
 
         Dim resultado = _clientes.Guardar(cliente, UsuarioIdActual, NombreUsuarioActual)
@@ -213,8 +216,26 @@ Public Class PaginaClientes
         Return 0
     End Function
 
+    ''' <summary>
+    ''' Recupera la marca de versión que se envió al formulario. Viaja en Base64 dentro de un
+    ''' campo oculto y no en Session: es estado de esta página concreta, y una sesión perdida no
+    ''' debe convertir una edición en una sobrescritura silenciosa.
+    ''' </summary>
+    Private Function LeerRowVersionDelFormulario() As Byte()
+        If String.IsNullOrWhiteSpace(hdnRowVersion.Value) Then Return Nothing
+
+        Try
+            Return Convert.FromBase64String(hdnRowVersion.Value)
+        Catch ex As FormatException
+            ' Un valor manipulado no debe tumbar la página: se trata como versión ausente, lo que
+            ' provoca el conflicto y obliga a recargar el registro.
+            Return Nothing
+        End Try
+    End Function
+
     Private Sub LimpiarFormulario()
         hdnClienteId.Value = "0"
+        hdnRowVersion.Value = String.Empty
         txtNombres.Text = String.Empty
         txtApellidos.Text = String.Empty
         txtDocumento.Text = String.Empty

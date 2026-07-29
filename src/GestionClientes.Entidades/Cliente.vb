@@ -13,6 +13,12 @@ Public Class Cliente
     Public Property Direccion As String = String.Empty
     Public Property FechaRegistro As DateTime
 
+    ''' <summary>
+    ''' Marca de versión de la fila, mantenida por SQL Server. Se usa para detectar que otro
+    ''' usuario modificó el registro entre que este lo cargó y lo guardó.
+    ''' </summary>
+    Public Property RowVersion As Byte()
+
     ''' <summary>Nombre y apellidos concatenados, para mostrar en la interfaz.</summary>
     Public ReadOnly Property NombreCompleto As String
         Get
