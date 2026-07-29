@@ -172,6 +172,43 @@ END
 GO
 
 /*
+    Clientes que cumplen el filtro de búsqueda.
+
+    Existe para que el predicado se escriba una sola vez: el procedimiento de listado lo necesita
+    dos veces, una para contar y otra para traer la página, y dos copias pueden desincronizarse y
+    producir un paginador que no concuerda con la rejilla.
+
+    Es una función en línea a propósito. El optimizador la expande dentro del plan de la consulta
+    que la invoca, así que no materializa nada. Una función multi-sentencia o una tabla temporal
+    sí materializarían el conjunto completo, que es exactamente lo que la paginación evita.
+*/
+CREATE OR ALTER FUNCTION dbo.fn_Clientes_Filtrados
+(
+    @Busqueda NVARCHAR(100)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT  ClienteId,
+            Nombres,
+            Apellidos,
+            Documento,
+            Email,
+            Telefono,
+            Direccion,
+            FechaRegistro,
+            [RowVersion]
+    FROM    dbo.Clientes
+    WHERE   @Busqueda IS NULL
+            OR LTRIM(RTRIM(@Busqueda)) = ''
+            OR Nombres   LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
+            OR Apellidos LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
+            OR Documento LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
+);
+GO
+
+/*
     Lista clientes con filtro, ordenamiento y paginación en el motor.
 
     La paginación se hace aquí y no en la interfaz: devolver todas las filas para mostrar diez
@@ -197,16 +234,7 @@ BEGIN
     IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina IS NULL OR @TamanoPagina < 1 SET @TamanoPagina = 10;
 
-    DECLARE @Patron NVARCHAR(110) = '%' + ISNULL(LTRIM(RTRIM(@Busqueda)), '') + '%';
-    DECLARE @SinFiltro BIT = CASE WHEN @Busqueda IS NULL OR LTRIM(RTRIM(@Busqueda)) = ''
-                                  THEN 1 ELSE 0 END;
-
-    SELECT  @TotalRegistros = COUNT(*)
-    FROM    dbo.Clientes
-    WHERE   @SinFiltro = 1
-            OR Nombres   LIKE @Patron
-            OR Apellidos LIKE @Patron
-            OR Documento LIKE @Patron;
+    SELECT @TotalRegistros = COUNT(*) FROM dbo.fn_Clientes_Filtrados(@Busqueda);
 
     SELECT  ClienteId,
             Nombres,
@@ -217,11 +245,7 @@ BEGIN
             Direccion,
             FechaRegistro,
             [RowVersion]
-    FROM    dbo.Clientes
-    WHERE   @SinFiltro = 1
-            OR Nombres   LIKE @Patron
-            OR Apellidos LIKE @Patron
-            OR Documento LIKE @Patron
+    FROM    dbo.fn_Clientes_Filtrados(@Busqueda)
     ORDER BY
             CASE WHEN @Descendente = 0 AND @Orden = 'Documento'     THEN Documento     END ASC,
             CASE WHEN @Descendente = 1 AND @Orden = 'Documento'     THEN Documento     END DESC,
@@ -430,6 +454,36 @@ END
 GO
 
 /*
+    Entradas de bitácora que cumplen los filtros. Existe por la misma razón que
+    dbo.fn_Clientes_Filtrados: que el predicado se escriba una sola vez.
+*/
+CREATE OR ALTER FUNCTION dbo.fn_Bitacora_Filtrada
+(
+    @FechaDesde    DATETIME2(0),
+    @FechaHasta    DATETIME2(0),
+    @Accion        NVARCHAR(10),
+    @NombreUsuario NVARCHAR(50)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT  BitacoraId,
+            Accion,
+            ClienteId,
+            UsuarioId,
+            NombreUsuario,
+            FechaHora,
+            Detalle
+    FROM    dbo.Bitacora
+    WHERE   (@FechaDesde    IS NULL OR FechaHora >= @FechaDesde)
+            AND (@FechaHasta    IS NULL OR FechaHora <  DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
+            AND (@Accion        IS NULL OR @Accion = ''        OR Accion = @Accion)
+            AND (@NombreUsuario IS NULL OR @NombreUsuario = '' OR NombreUsuario = @NombreUsuario)
+);
+GO
+
+/*
     Consulta la bitácora con filtros, ordenamiento y paginación en el motor. Importa más aquí que
     en clientes: cada fila lleva un Detalle NVARCHAR(MAX) con el JSON del cambio, así que traer
     la tabla entera para mostrar quince filas es especialmente costoso.
@@ -451,12 +505,8 @@ BEGIN
     IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina IS NULL OR @TamanoPagina < 1 SET @TamanoPagina = 15;
 
-    SELECT  @TotalRegistros = COUNT(*)
-    FROM    dbo.Bitacora
-    WHERE   (@FechaDesde    IS NULL OR FechaHora >= @FechaDesde)
-            AND (@FechaHasta    IS NULL OR FechaHora <  DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
-            AND (@Accion        IS NULL OR @Accion = ''        OR Accion = @Accion)
-            AND (@NombreUsuario IS NULL OR @NombreUsuario = '' OR NombreUsuario = @NombreUsuario);
+    SELECT @TotalRegistros = COUNT(*)
+    FROM   dbo.fn_Bitacora_Filtrada(@FechaDesde, @FechaHasta, @Accion, @NombreUsuario);
 
     SELECT  BitacoraId,
             Accion,
@@ -465,11 +515,7 @@ BEGIN
             NombreUsuario,
             FechaHora,
             Detalle
-    FROM    dbo.Bitacora
-    WHERE   (@FechaDesde    IS NULL OR FechaHora >= @FechaDesde)
-            AND (@FechaHasta    IS NULL OR FechaHora <  DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
-            AND (@Accion        IS NULL OR @Accion = ''        OR Accion = @Accion)
-            AND (@NombreUsuario IS NULL OR @NombreUsuario = '' OR NombreUsuario = @NombreUsuario)
+    FROM    dbo.fn_Bitacora_Filtrada(@FechaDesde, @FechaHasta, @Accion, @NombreUsuario)
     ORDER BY
             CASE WHEN @Descendente = 0 AND @Orden = 'FechaHora'     THEN FechaHora     END ASC,
             CASE WHEN @Descendente = 1 AND @Orden = 'FechaHora'     THEN FechaHora     END DESC,
