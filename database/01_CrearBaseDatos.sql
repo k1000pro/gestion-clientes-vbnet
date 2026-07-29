@@ -159,16 +159,41 @@ END
 GO
 
 /*
-    Lista clientes. @Busqueda filtra por nombres, apellidos o documento.
-    El comodín se aplica con parámetro, nunca concatenando la cadena de búsqueda en el SQL.
+    Lista clientes con filtro, ordenamiento y paginación en el motor.
+
+    La paginación se hace aquí y no en la interfaz: devolver todas las filas para mostrar diez
+    obliga a transportarlas y materializarlas enteras. @TotalRegistros sale por parámetro de
+    salida para que la interfaz pueda dibujar el paginador sin una segunda consulta.
+
+    El ordenamiento NO usa SQL dinámico. @Orden llega como texto pero nunca se concatena en la
+    consulta: se resuelve con expresiones CASE, de modo que un valor arbitrario no puede
+    ejecutarse. Se usa una expresión por columna y dirección porque un CASE devuelve un solo
+    tipo, y mezclar NVARCHAR con DATETIME2 forzaría conversiones implícitas.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Listar
-    @Busqueda NVARCHAR(100) = NULL
+    @Busqueda       NVARCHAR(100) = NULL,
+    @Orden          NVARCHAR(20)  = 'Apellidos',
+    @Descendente    BIT           = 0,
+    @Pagina         INT           = 1,
+    @TamanoPagina   INT           = 10,
+    @TotalRegistros INT           OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina < 1 SET @TamanoPagina = 10;
+
     DECLARE @Patron NVARCHAR(110) = '%' + ISNULL(LTRIM(RTRIM(@Busqueda)), '') + '%';
+    DECLARE @SinFiltro BIT = CASE WHEN @Busqueda IS NULL OR LTRIM(RTRIM(@Busqueda)) = ''
+                                  THEN 1 ELSE 0 END;
+
+    SELECT  @TotalRegistros = COUNT(*)
+    FROM    dbo.Clientes
+    WHERE   @SinFiltro = 1
+            OR Nombres   LIKE @Patron
+            OR Apellidos LIKE @Patron
+            OR Documento LIKE @Patron;
 
     SELECT  ClienteId,
             Nombres,
@@ -179,12 +204,24 @@ BEGIN
             Direccion,
             FechaRegistro
     FROM    dbo.Clientes
-    WHERE   @Busqueda IS NULL
-            OR LTRIM(RTRIM(@Busqueda)) = ''
+    WHERE   @SinFiltro = 1
             OR Nombres   LIKE @Patron
             OR Apellidos LIKE @Patron
             OR Documento LIKE @Patron
-    ORDER BY Apellidos, Nombres;
+    ORDER BY
+            CASE WHEN @Descendente = 0 AND @Orden = 'Documento'     THEN Documento     END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'Documento'     THEN Documento     END DESC,
+            CASE WHEN @Descendente = 0 AND @Orden = 'Nombres'       THEN Nombres       END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'Nombres'       THEN Nombres       END DESC,
+            CASE WHEN @Descendente = 0 AND @Orden = 'Apellidos'     THEN Apellidos     END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'Apellidos'     THEN Apellidos     END DESC,
+            CASE WHEN @Descendente = 0 AND @Orden = 'FechaRegistro' THEN FechaRegistro END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'FechaRegistro' THEN FechaRegistro END DESC,
+            /* Desempate obligatorio: sin un orden total, dos filas con el mismo apellido
+               podrían intercambiarse entre páginas y una de ellas no aparecer nunca. */
+            ClienteId
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
 END
 GO
 
@@ -368,17 +405,33 @@ END
 GO
 
 /*
-    Consulta la bitácora con filtros opcionales. @FechaHasta se compara con < día siguiente
-    para que el filtro incluya el día completo sin depender de la hora.
+    Consulta la bitácora con filtros, ordenamiento y paginación en el motor. Importa más aquí que
+    en clientes: cada fila lleva un Detalle NVARCHAR(MAX) con el JSON del cambio, así que traer
+    la tabla entera para mostrar quince filas es especialmente costoso.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Bitacora_Listar
-    @FechaDesde    DATETIME2(0) = NULL,
-    @FechaHasta    DATETIME2(0) = NULL,
-    @Accion        NVARCHAR(10) = NULL,
-    @NombreUsuario NVARCHAR(50) = NULL
+    @FechaDesde     DATETIME2(0) = NULL,
+    @FechaHasta     DATETIME2(0) = NULL,
+    @Accion         NVARCHAR(10) = NULL,
+    @NombreUsuario  NVARCHAR(50) = NULL,
+    @Orden          NVARCHAR(20) = 'FechaHora',
+    @Descendente    BIT          = 1,
+    @Pagina         INT          = 1,
+    @TamanoPagina   INT          = 15,
+    @TotalRegistros INT          OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina < 1 SET @TamanoPagina = 15;
+
+    SELECT  @TotalRegistros = COUNT(*)
+    FROM    dbo.Bitacora
+    WHERE   (@FechaDesde    IS NULL OR FechaHora >= @FechaDesde)
+            AND (@FechaHasta    IS NULL OR FechaHora <  DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
+            AND (@Accion        IS NULL OR @Accion = ''        OR Accion = @Accion)
+            AND (@NombreUsuario IS NULL OR @NombreUsuario = '' OR NombreUsuario = @NombreUsuario);
 
     SELECT  BitacoraId,
             Accion,
@@ -392,7 +445,33 @@ BEGIN
             AND (@FechaHasta    IS NULL OR FechaHora <  DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
             AND (@Accion        IS NULL OR @Accion = ''        OR Accion = @Accion)
             AND (@NombreUsuario IS NULL OR @NombreUsuario = '' OR NombreUsuario = @NombreUsuario)
-    ORDER BY FechaHora DESC, BitacoraId DESC;
+    ORDER BY
+            CASE WHEN @Descendente = 0 AND @Orden = 'FechaHora'     THEN FechaHora     END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'FechaHora'     THEN FechaHora     END DESC,
+            CASE WHEN @Descendente = 0 AND @Orden = 'Accion'        THEN Accion        END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'Accion'        THEN Accion        END DESC,
+            CASE WHEN @Descendente = 0 AND @Orden = 'NombreUsuario' THEN NombreUsuario END ASC,
+            CASE WHEN @Descendente = 1 AND @Orden = 'NombreUsuario' THEN NombreUsuario END DESC,
+            BitacoraId DESC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
+END
+GO
+
+/*
+    Nombres de usuario distintos presentes en la bitácora, para poblar el filtro de la pantalla.
+
+    Existe como procedimiento propio porque, con la consulta principal ya paginada, derivar la
+    lista recorriendo una página daría un desplegable incompleto.
+*/
+CREATE OR ALTER PROCEDURE dbo.usp_Bitacora_ListarUsuarios
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT DISTINCT NombreUsuario
+    FROM   dbo.Bitacora
+    ORDER BY NombreUsuario;
 END
 GO
 
