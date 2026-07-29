@@ -9,6 +9,20 @@
     El script es idempotente: puede ejecutarse varias veces sin error y sin duplicar datos.
 */
 
+/*
+    QUOTED_IDENTIFIER y ANSI_NULLS deben estar activos para todo el script.
+
+    El índice único de Documento es filtrado, y SQL Server exige QUOTED_IDENTIFIER ON tanto para
+    crearlo como para cualquier INSERT o UPDATE sobre la tabla que lo tiene. Además, los
+    procedimientos almacenados congelan estas opciones en el momento de crearse: uno creado con
+    QUOTED_IDENTIFIER OFF falla en ejecución con el error 1934 al tocar esa tabla.
+
+    Hace falta declararlo porque los valores por omisión no coinciden entre herramientas: SSMS
+    conecta con QUOTED_IDENTIFIER ON y sqlcmd con OFF. Sin estas líneas el script funciona al
+    ejecutarlo desde SSMS y falla desde la línea de comandos.
+*/
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
 SET NOCOUNT ON;
 GO
 
@@ -70,8 +84,14 @@ BEGIN
         Email         NVARCHAR(150)  NULL,
         Telefono      NVARCHAR(20)   NULL,
         Direccion     NVARCHAR(250)  NULL,
-        FechaRegistro DATETIME2(0)   NOT NULL CONSTRAINT DF_Clientes_FechaRegistro DEFAULT (SYSDATETIME()),
-        [RowVersion]  ROWVERSION     NOT NULL,
+        FechaRegistro     DATETIME2(0) NOT NULL CONSTRAINT DF_Clientes_FechaRegistro DEFAULT (SYSDATETIME()),
+        CreadoPor         INT          NULL,
+        FechaModificacion DATETIME2(0) NULL,
+        ModificadoPor     INT          NULL,
+        Eliminado         BIT          NOT NULL CONSTRAINT DF_Clientes_Eliminado DEFAULT (0),
+        FechaEliminacion  DATETIME2(0) NULL,
+        EliminadoPor      INT          NULL,
+        [RowVersion]      ROWVERSION   NOT NULL,
         CONSTRAINT PK_Clientes PRIMARY KEY CLUSTERED (ClienteId)
     );
 
@@ -79,10 +99,52 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes
-               WHERE name = 'UX_Clientes_Documento' AND object_id = OBJECT_ID('dbo.Clientes'))
+/*
+    Migración de los campos de auditoría y del borrado lógico para bases anteriores. Las columnas
+    de "quién" son NULL y no llevan clave foránea a Usuarios: registran quién hizo la acción en el
+    momento en que se hizo, y ese hecho no debe dejar de ser cierto si el usuario se elimina
+    después. La bitácora aplica el mismo criterio con NombreUsuario.
+*/
+IF COL_LENGTH('dbo.Clientes', 'Eliminado') IS NULL
 BEGIN
-    CREATE UNIQUE INDEX UX_Clientes_Documento ON dbo.Clientes (Documento);
+    ALTER TABLE dbo.Clientes ADD
+        CreadoPor         INT          NULL,
+        FechaModificacion DATETIME2(0) NULL,
+        ModificadoPor     INT          NULL,
+        Eliminado         BIT          NOT NULL CONSTRAINT DF_Clientes_Eliminado DEFAULT (0),
+        FechaEliminacion  DATETIME2(0) NULL,
+        EliminadoPor      INT          NULL;
+
+    PRINT 'Columnas de auditoria y borrado logico agregadas a Clientes.';
+END
+GO
+
+/*
+    El índice de documento es único solo entre los clientes vigentes.
+
+    Sin el filtro, borrar lógicamente a un cliente dejaría su DUI bloqueado para siempre: nadie
+    podría volver a registrarse con ese documento aunque el registro anterior ya no exista para el
+    negocio. Con el filtro, el documento se libera al borrar y sigue siendo único entre los vivos.
+
+    La guarda comprueba que el índice exista Y que esté filtrado, para que una base creada con la
+    versión anterior —donde el índice no tenía filtro— lo reemplace en lugar de conservarlo.
+*/
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_Clientes_Documento'
+                     AND object_id = OBJECT_ID('dbo.Clientes')
+                     AND has_filter = 1)
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'UX_Clientes_Documento' AND object_id = OBJECT_ID('dbo.Clientes'))
+    BEGIN
+        DROP INDEX UX_Clientes_Documento ON dbo.Clientes;
+        PRINT 'Indice UX_Clientes_Documento anterior eliminado para agregarle el filtro.';
+    END
+
+    CREATE UNIQUE INDEX UX_Clientes_Documento
+        ON dbo.Clientes (Documento)
+        WHERE Eliminado = 0;
+
     PRINT 'Indice UX_Clientes_Documento creado.';
 END
 GO
@@ -102,9 +164,15 @@ GO
 /* ------------------------------------------------------------------ Bitacora */
 /*
     Bitacora.ClienteId NO lleva clave foránea hacia Clientes de forma deliberada.
-    El borrado de clientes es físico; una FK obligaría a borrar en cascada (destruyendo el
-    historial que esta tabla existe para conservar) o a bloquear el borrado. El snapshot del
-    registro eliminado queda en la columna Detalle.
+
+    Esta tabla es el registro de auditoría del sistema, no el histórico de una entidad concreta.
+    Clientes es lo primero que se audita, no lo único que se auditará: mañana registra un cambio
+    de configuración o un acceso, acciones que no tienen cliente asociado. Una clave foránea la
+    ataría para siempre a la primera entidad que se le ocurrió auditar a alguien.
+
+    Y aunque el borrado de clientes hoy es lógico, la auditoría debe sobrevivir incluso a una
+    purga física que haga soporte algún día. Por eso el snapshot completo del registro queda en la
+    columna Detalle: la bitácora no depende de que la fila original siga existiendo.
 
     NombreUsuario se desnormaliza a propósito: preserva el valor histórico aunque el usuario
     se renombre o se elimine después.
@@ -198,6 +266,12 @@ RETURN
             c.Telefono,
             c.Direccion,
             c.FechaRegistro,
+            c.CreadoPor,
+            c.FechaModificacion,
+            c.ModificadoPor,
+            c.Eliminado,
+            c.FechaEliminacion,
+            c.EliminadoPor,
             c.[RowVersion]
     FROM    dbo.Clientes AS c
             /*
@@ -220,11 +294,20 @@ RETURN
                     '[', '\[')
                 + '%'
             )) AS f(Patron)
-    WHERE   @Busqueda IS NULL
-            OR LTRIM(RTRIM(@Busqueda)) = ''
-            OR c.Nombres   LIKE f.Patron ESCAPE '\'
-            OR c.Apellidos LIKE f.Patron ESCAPE '\'
-            OR c.Documento LIKE f.Patron ESCAPE '\'
+    /*
+        Los clientes borrados lógicamente no existen para el negocio. El paréntesis alrededor de
+        las alternativas de búsqueda es obligatorio: AND liga más fuerte que OR, así que sin él el
+        filtro de borrado solo aplicaría a la primera alternativa y los borrados reaparecerían en
+        cuanto alguien buscara por apellido.
+    */
+    WHERE   c.Eliminado = 0
+            AND (
+                @Busqueda IS NULL
+                OR LTRIM(RTRIM(@Busqueda)) = ''
+                OR c.Nombres   LIKE f.Patron ESCAPE '\'
+                OR c.Apellidos LIKE f.Patron ESCAPE '\'
+                OR c.Documento LIKE f.Patron ESCAPE '\'
+            )
 );
 GO
 
@@ -256,6 +339,11 @@ BEGIN
 
     SELECT @TotalRegistros = COUNT(*) FROM dbo.fn_Clientes_Filtrados(@Busqueda);
 
+    /*
+        La lista de columnas debe coincidir con la de usp_Cliente_ObtenerPorId: ClienteDAL.Mapear
+        es una sola función compartida por ambos caminos y lee todas por nombre. Si una falta
+        aquí, el listado revienta en ejecución con IndexOutOfRangeException, no al compilar.
+    */
     SELECT  ClienteId,
             Nombres,
             Apellidos,
@@ -264,6 +352,12 @@ BEGIN
             Telefono,
             Direccion,
             FechaRegistro,
+            CreadoPor,
+            FechaModificacion,
+            ModificadoPor,
+            Eliminado,
+            FechaEliminacion,
+            EliminadoPor,
             [RowVersion]
     FROM    dbo.fn_Clientes_Filtrados(@Busqueda)
     ORDER BY
@@ -297,9 +391,16 @@ BEGIN
             Telefono,
             Direccion,
             FechaRegistro,
+            CreadoPor,
+            FechaModificacion,
+            ModificadoPor,
+            Eliminado,
+            FechaEliminacion,
+            EliminadoPor,
             [RowVersion]
     FROM    dbo.Clientes
-    WHERE   ClienteId = @ClienteId;
+    WHERE   ClienteId = @ClienteId
+            AND Eliminado = 0;
 END
 GO
 
@@ -323,14 +424,15 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE Documento = @Documento)
+    /* Un documento que perteneció a un cliente borrado vuelve a estar libre. */
+    IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE Documento = @Documento AND Eliminado = 0)
         THROW 50001, 'Ya existe un cliente registrado con ese documento.', 1;
 
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        INSERT INTO dbo.Clientes (Nombres, Apellidos, Documento, Email, Telefono, Direccion)
-        VALUES (@Nombres, @Apellidos, @Documento, @Email, @Telefono, @Direccion);
+        INSERT INTO dbo.Clientes (Nombres, Apellidos, Documento, Email, Telefono, Direccion, CreadoPor)
+        VALUES (@Nombres, @Apellidos, @Documento, @Email, @Telefono, @Direccion, @UsuarioId);
 
         SET @ClienteId = CAST(SCOPE_IDENTITY() AS INT);
 
@@ -379,10 +481,11 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.Clientes WHERE ClienteId = @ClienteId)
+    IF NOT EXISTS (SELECT 1 FROM dbo.Clientes WHERE ClienteId = @ClienteId AND Eliminado = 0)
         THROW 50002, 'El cliente indicado no existe.', 1;
 
-    IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE Documento = @Documento AND ClienteId <> @ClienteId)
+    IF EXISTS (SELECT 1 FROM dbo.Clientes
+               WHERE Documento = @Documento AND ClienteId <> @ClienteId AND Eliminado = 0)
         THROW 50001, 'Ya existe un cliente registrado con ese documento.', 1;
 
     BEGIN TRY
@@ -397,12 +500,14 @@ BEGIN
         );
 
         UPDATE  dbo.Clientes
-        SET     Nombres   = @Nombres,
-                Apellidos = @Apellidos,
-                Documento = @Documento,
-                Email     = @Email,
-                Telefono  = @Telefono,
-                Direccion = @Direccion
+        SET     Nombres           = @Nombres,
+                Apellidos         = @Apellidos,
+                Documento         = @Documento,
+                Email             = @Email,
+                Telefono          = @Telefono,
+                Direccion         = @Direccion,
+                FechaModificacion = SYSDATETIME(),
+                ModificadoPor     = @UsuarioId
         WHERE   ClienteId = @ClienteId
                 AND [RowVersion] = @RowVersion;
 
@@ -444,7 +549,7 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.Clientes WHERE ClienteId = @ClienteId)
+    IF NOT EXISTS (SELECT 1 FROM dbo.Clientes WHERE ClienteId = @ClienteId AND Eliminado = 0)
         THROW 50002, 'El cliente indicado no existe.', 1;
 
     BEGIN TRY
@@ -461,7 +566,20 @@ BEGIN
         INSERT INTO dbo.Bitacora (Accion, ClienteId, UsuarioId, NombreUsuario, Detalle)
         VALUES ('ELIMINAR', @ClienteId, @UsuarioId, @NombreUsuario, @Detalle);
 
-        DELETE FROM dbo.Clientes WHERE ClienteId = @ClienteId;
+        /*
+            Borrado lógico. El registro deja de existir para la aplicación —no lo devuelve ningún
+            listado ni ObtenerPorId— pero la fila permanece y solo soporte puede recuperarla desde
+            la base. En un sistema que maneja cartera de crédito, un DELETE físico destruye el
+            extremo de relaciones que quizá ya no se pueden reconstruir.
+
+            El snapshot se toma antes, igual que cuando el borrado era físico: registra el estado
+            exacto en el momento de borrar, que es lo que interesa auditar.
+        */
+        UPDATE  dbo.Clientes
+        SET     Eliminado        = 1,
+                FechaEliminacion = SYSDATETIME(),
+                EliminadoPor     = @UsuarioId
+        WHERE   ClienteId = @ClienteId;
 
         COMMIT TRANSACTION;
     END TRY

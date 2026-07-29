@@ -89,6 +89,24 @@ Friend NotInheritable Class SqlHelper
         Return lector.GetString(indice)
     End Function
 
+    ''' <summary>
+    ''' Lee una columna entera que admite nulos. Los campos de auditoría de quién hizo qué son
+    ''' nulos en los registros anteriores a que existieran, y confundir eso con un cero apuntaría
+    ''' a un usuario que no hizo nada.
+    ''' </summary>
+    Friend Shared Function LeerEnteroOpcional(lector As IDataRecord, columna As String) As Integer?
+        Dim indice = lector.GetOrdinal(columna)
+        If lector.IsDBNull(indice) Then Return Nothing
+        Return lector.GetInt32(indice)
+    End Function
+
+    ''' <summary>Lee una columna de fecha que admite nulos.</summary>
+    Friend Shared Function LeerFechaOpcional(lector As IDataRecord, columna As String) As DateTime?
+        Dim indice = lector.GetOrdinal(columna)
+        If lector.IsDBNull(indice) Then Return Nothing
+        Return lector.GetDateTime(indice)
+    End Function
+
     ''' <summary>Lee una columna binaria (hash o salt).</summary>
     Friend Shared Function LeerBytes(lector As IDataRecord, columna As String) As Byte()
         Dim indice = lector.GetOrdinal(columna)

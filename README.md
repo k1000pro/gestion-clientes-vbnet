@@ -33,7 +33,13 @@ sqlcmd -S .\SQLEXPRESS -E -i database\01_CrearBaseDatos.sql
 
 El script crea la base `GestionClientesDB`, las tablas `Usuarios`, `Clientes` y `Bitacora`, dos
 funciones, los procedimientos almacenados y el usuario administrador inicial. Es idempotente:
-puede ejecutarse varias veces sin duplicar datos.
+puede ejecutarse varias veces sin duplicar datos, y migra una base creada con una versión anterior
+agregando las columnas que le falten.
+
+El script declara `SET QUOTED_IDENTIFIER ON` al inicio y lo necesita: el índice único de
+`Documento` es filtrado, y SQL Server exige esa opción tanto para crearlo como para escribir en la
+tabla. SSMS conecta con esa opción activa y `sqlcmd` no, así que sin la declaración el script
+funcionaría desde SSMS y fallaría desde la línea de comandos.
 
 ### 2. Cadena de conexión
 
@@ -100,10 +106,13 @@ una llamada separada, bastaría con que una ruta nueva olvidara invocarla para q
 tuviera huecos, y un fallo entre ambas operaciones dejaría la base inconsistente. Así la garantía
 es estructural: se aplican ambas o ninguna.
 
-**`Bitacora.ClienteId` no tiene clave foránea.** El borrado de clientes es físico. Una clave
-foránea obligaría a borrar en cascada, destruyendo el historial que la bitácora existe para
-conservar, o a bloquear el borrado. La columna `Detalle` guarda el snapshot completo del
-registro eliminado.
+**`Bitacora.ClienteId` no tiene clave foránea.** La bitácora es el registro de auditoría del
+sistema, no el histórico de una entidad concreta. Clientes es lo primero que se audita, no lo
+único que se auditará: una acción futura sobre configuración o sobre un acceso no tiene cliente
+asociado, y una clave foránea ataría la tabla para siempre a la primera entidad que se le ocurrió
+auditar a alguien. Además, la auditoría debe sobrevivir incluso a una purga física que haga
+soporte algún día, y por eso `Detalle` guarda el snapshot completo del registro: la bitácora no
+depende de que la fila original siga existiendo.
 
 **`NombreUsuario` está desnormalizado en la bitácora.** Preserva el valor histórico aunque el
 usuario se renombre o se elimine. `UsuarioId` se mantiene para poder unir con `Usuarios`.
@@ -188,6 +197,46 @@ una función de tabla en línea, y lo comparten la consulta de conteo y la de p�
 que no coincida con lo que muestra la rejilla deja de ser posible. La función es en línea (no
 multiinstrucción) para que el optimizador la expanda dentro del plan de ejecución en lugar de
 materializar un resultado intermedio.
+
+**Campos de auditoría y borrado lógico.** `Clientes` registra quién creó el registro, quién lo
+modificó por última vez y cuándo, y si fue borrado. Los campos viven en una clase base,
+`EntidadAuditable`, de la que hereda `Cliente`: no describen a un cliente, describen el hecho de
+haber sido guardado, así que una entidad nueva los obtiene sin volver a declararlos.
+
+El borrado es lógico. `usp_Cliente_Eliminar` marca la fila en lugar de ejecutar `DELETE`: el
+registro deja de existir para la aplicación —ningún listado ni `ObtenerPorId` lo devuelven— pero
+la fila permanece y solo soporte puede recuperarla desde la base. En un sistema que maneja cartera
+de crédito, un borrado físico destruye el extremo de relaciones que quizá ya no se pueden
+reconstruir.
+
+Conviene no confundir dos conceptos que a veces se colapsan en una sola columna: *eliminado*
+significa que el registro no debe volver a aparecer y solo soporte lo revierte; un estado de
+negocio como *inactivo* significaría que el registro sigue siendo válido pero no debe ofrecerse en
+ciertos lugares, y lo alternaría el usuario en ambos sentidos. Aquí solo existe el primero, porque
+es el que corresponde a la acción de eliminar que pide el enunciado.
+
+El índice único de `Documento` pasó a ser filtrado por `Eliminado = 0`. Sin el filtro, borrar a un
+cliente bloquearía su DUI para siempre y nadie podría volver a registrarse con ese documento.
+
+## Qué generalizaría este diseño al crecer, y por qué todavía no
+
+El sistema tiene una sola entidad de negocio. Eso condiciona qué abstracciones están justificadas
+hoy y cuáles serían adivinar.
+
+**Lo que sí se extrajo, porque ya tenía dos consumidores:** `Paginador.ascx` como control
+reutilizable en cuanto lo necesitaron las dos rejillas; `MarcarCabeceraOrdenada` en `PaginaBase`
+en cuanto el indicador de ordenamiento hizo falta en ambas páginas; `SqlHelper` como único punto
+donde se abren conexiones y se crean comandos; y `EntidadAuditable`, porque los campos de
+auditoría son transversales por definición.
+
+**Lo que no se construyó:** un repositorio genérico `RepositorioBase(Of T)` con CRUD por
+convención, y una rejilla genérica configurable por metadatos de entidad. Ambos son el camino
+natural cuando aparecen la tercera y la cuarta entidad y el esqueleto de "abrir conexión, poblar
+parámetros, recorrer el lector" se repite lo suficiente como para que el contrato sea evidente.
+Con una sola entidad ese contrato habría que inventarlo, y una abstracción diseñada contra un
+único caso normalmente acierta con ese caso y falla con el siguiente.
+
+El criterio que se siguió es extraer cuando hay dos usos reales, no cuando podría haberlos.
 
 ## Seguridad
 

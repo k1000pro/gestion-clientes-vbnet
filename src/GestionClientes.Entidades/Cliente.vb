@@ -1,8 +1,12 @@
 ''' <summary>
 ''' Representa a un cliente del sistema. Es un contenedor de datos: no contiene reglas de
 ''' negocio ni acceso a base de datos.
+'''
+''' Hereda de EntidadAuditable los campos de creación, modificación y borrado lógico, que son
+''' comunes a cualquier entidad persistida y no describen nada propio de un cliente.
 ''' </summary>
 Public Class Cliente
+    Inherits EntidadAuditable
 
     Public Property ClienteId As Integer
     Public Property Nombres As String = String.Empty
@@ -11,7 +15,6 @@ Public Class Cliente
     Public Property Email As String = String.Empty
     Public Property Telefono As String = String.Empty
     Public Property Direccion As String = String.Empty
-    Public Property FechaRegistro As DateTime
 
     ''' <summary>
     ''' Marca de versión de la fila, mantenida por SQL Server. Se usa para detectar que otro

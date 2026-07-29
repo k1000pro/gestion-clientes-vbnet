@@ -173,6 +173,12 @@ Public Class ClienteDAL
             .Telefono = SqlHelper.LeerTexto(lector, "Telefono"),
             .Direccion = SqlHelper.LeerTexto(lector, "Direccion"),
             .FechaRegistro = lector.GetDateTime(lector.GetOrdinal("FechaRegistro")),
+            .CreadoPor = SqlHelper.LeerEnteroOpcional(lector, "CreadoPor"),
+            .FechaModificacion = SqlHelper.LeerFechaOpcional(lector, "FechaModificacion"),
+            .ModificadoPor = SqlHelper.LeerEnteroOpcional(lector, "ModificadoPor"),
+            .Eliminado = lector.GetBoolean(lector.GetOrdinal("Eliminado")),
+            .FechaEliminacion = SqlHelper.LeerFechaOpcional(lector, "FechaEliminacion"),
+            .EliminadoPor = SqlHelper.LeerEnteroOpcional(lector, "EliminadoPor"),
             .RowVersion = SqlHelper.LeerBytes(lector, "RowVersion")
         }
     End Function
