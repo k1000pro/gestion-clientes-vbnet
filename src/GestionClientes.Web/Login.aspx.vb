@@ -36,13 +36,14 @@ Public Class PaginaLogin
     End Sub
 
     ''' <summary>
-    ''' Establece la sesión autenticada. Se descarta la sesión anterior antes de crear la nueva
-    ''' para evitar la fijación de sesión: un identificador conocido por un tercero deja de ser
-    ''' válido en el momento en que el usuario se autentica.
+    ''' Establece la sesión autenticada. Se limpia cualquier dato de la sesión anterior antes de
+    ''' escribir los del usuario que inicia sesión, para que no queden datos ajenos reutilizables.
+    ''' No se llama a Session.Abandon(): esa llamada marca la sesión actual para su destrucción al
+    ''' final de la petición, así que los valores que se escriben aquí después nunca llegan a la
+    ''' siguiente petición (ASP.NET entrega una sesión nueva y vacía) y UsuarioIdActual queda en 0.
     ''' </summary>
     Private Sub IniciarSesion(usuarioId As Integer, nombreUsuario As String, nombreCompleto As String)
         Session.Clear()
-        Session.Abandon()
 
         FormsAuthentication.SetAuthCookie(nombreUsuario, False)
 
