@@ -190,21 +190,41 @@ RETURNS TABLE
 AS
 RETURN
 (
-    SELECT  ClienteId,
-            Nombres,
-            Apellidos,
-            Documento,
-            Email,
-            Telefono,
-            Direccion,
-            FechaRegistro,
-            [RowVersion]
-    FROM    dbo.Clientes
+    SELECT  c.ClienteId,
+            c.Nombres,
+            c.Apellidos,
+            c.Documento,
+            c.Email,
+            c.Telefono,
+            c.Direccion,
+            c.FechaRegistro,
+            c.[RowVersion]
+    FROM    dbo.Clientes AS c
+            /*
+                Los comodines que el usuario escriba se tratan como texto literal. Sin esto,
+                teclear % en el buscador devuelve todos los clientes y _ actúa como comodín de un
+                carácter, que no es lo que nadie espera de una caja de búsqueda. Se escapa primero
+                la propia barra invertida, porque hacerlo después volvería a escapar las que
+                introducen los reemplazos siguientes.
+
+                El patrón se calcula una sola vez con CROSS APPLY en lugar de repetirlo en cada
+                comparación: una función en línea no admite DECLARE.
+            */
+            CROSS APPLY (VALUES (
+                '%' +
+                REPLACE(REPLACE(REPLACE(REPLACE(
+                    LTRIM(RTRIM(@Busqueda)),
+                    '\', '\\'),
+                    '%', '\%'),
+                    '_', '\_'),
+                    '[', '\[')
+                + '%'
+            )) AS f(Patron)
     WHERE   @Busqueda IS NULL
             OR LTRIM(RTRIM(@Busqueda)) = ''
-            OR Nombres   LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
-            OR Apellidos LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
-            OR Documento LIKE '%' + LTRIM(RTRIM(@Busqueda)) + '%'
+            OR c.Nombres   LIKE f.Patron ESCAPE '\'
+            OR c.Apellidos LIKE f.Patron ESCAPE '\'
+            OR c.Documento LIKE f.Patron ESCAPE '\'
 );
 GO
 
