@@ -15,7 +15,7 @@
             <div class="card-body p-4 text-center">
                 <h1 class="h4 mb-3">Ocurrió un error</h1>
                 <p class="text-muted mb-4">
-                    No fue posible completar la operación. El detalle quedó registrado para su revisión.
+                    <asp:Literal ID="litMensaje" runat="server" />
                 </p>
                 <a class="btn btn-primary" href="<%= ResolveUrl("~/Clientes.aspx") %>">Volver al inicio</a>
             </div>

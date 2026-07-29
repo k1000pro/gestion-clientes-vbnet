@@ -41,6 +41,22 @@ Public Class Global_asax
         Dim excepcion = Server.GetLastError()
         If excepcion Is Nothing Then Return
 
+        ' La validación de petición de ASP.NET rechaza contenido que parece marcado. No es un
+        ' fallo del sistema: es la protección funcionando, y el usuario puede corregirlo. Se
+        ' registra como advertencia y se le responde con un mensaje entendible, sin desactivar ni
+        ' relajar la validación.
+        Dim validacion = TryCast(excepcion, HttpUnhandledException)
+        Dim raiz = If(validacion IsNot Nothing AndAlso validacion.InnerException IsNot Nothing,
+                      validacion.InnerException, excepcion)
+
+        If TypeOf raiz Is HttpRequestValidationException Then
+            Registro.Warn("Contenido no permitido rechazado por la validación de petición.")
+            Server.ClearError()
+            Response.Redirect("~/Error.aspx?motivo=contenido", False)
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
+
         Dim url As String = "(desconocida)"
         Try
             url = HttpContext.Current?.Request?.Url?.ToString()
