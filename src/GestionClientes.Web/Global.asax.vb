@@ -24,7 +24,8 @@ Public Class Global_asax
 
         Dim url As String = "(desconocida)"
         Try
-            url = HttpContext.Current?.Request?.Url?.ToString()
+            Dim solicitada = HttpContext.Current?.Request?.Url?.ToString()
+            If Not String.IsNullOrEmpty(solicitada) Then url = solicitada
         Catch
             ' Request no está disponible en todos los contextos en los que se dispara este
             ' manejador (por ejemplo, un fallo durante el arranque). Un HttpException aquí
@@ -45,7 +46,7 @@ Public Class Global_asax
             Return
         End If
 
-        Registro.Error($"Excepción no controlada en {If(url, "(desconocida)")}", excepcion)
+        Registro.Error($"Excepción no controlada en {url}", excepcion)
     End Sub
 
 End Class

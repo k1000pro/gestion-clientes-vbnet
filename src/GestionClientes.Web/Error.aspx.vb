@@ -16,6 +16,12 @@ Public Class PaginaError
         "Corrija el dato y vuelva a intentarlo."
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        ' Misma política de caché que las páginas autenticadas: esta se alcanza desde ellas y no
+        ' debe quedar en el historial del navegador.
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
+        Response.Cache.SetExpires(DateTime.UtcNow.AddDays(-1))
+
         ' El motivo solo se acepta cuando la página se alcanzó por redirección explícita. En la
         ' ruta de customErrors, que usa ResponseRewrite, esta página se ejecuta dentro de la
         ' petición original y vería su cadena de consulta, no la nuestra.
