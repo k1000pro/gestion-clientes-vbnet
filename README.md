@@ -33,8 +33,8 @@ sqlcmd -S .\SQLEXPRESS -E -i database\01_CrearBaseDatos.sql
 
 El script crea la base `GestionClientesDB`, las tablas `Usuarios`, `Clientes` y `Bitacora`, dos
 funciones, los procedimientos almacenados y el usuario administrador inicial. Es idempotente:
-puede ejecutarse varias veces sin duplicar datos, y migra una base creada con una versión anterior
-agregando las columnas que le falten.
+puede ejecutarse varias veces sin duplicar datos, y sobre una base incompleta —por ejemplo si una
+corrida anterior se interrumpió— agrega solo lo que falte en lugar de fallar.
 
 El script declara `SET QUOTED_IDENTIFIER ON` al inicio y lo necesita: el índice único de
 `Documento` es filtrado, y SQL Server exige esa opción tanto para crearlo como para escribir en la
@@ -98,13 +98,13 @@ sin dar señales visibles.
 
 ## Decisiones de diseño
 
-**La bitácora es un requisito de trazabilidad típico de las instituciones financieras
-supervisadas**, donde debe poder demostrarse quién tocó qué registro y cuándo. Por eso se escribe
-dentro del procedimiento almacenado y no desde la aplicación: cada procedimiento de escritura
-modifica al cliente y registra la acción en la misma transacción. Si el registro se hiciera con
-una llamada separada, bastaría con que una ruta nueva olvidara invocarla para que la auditoría
-tuviera huecos, y un fallo entre ambas operaciones dejaría la base inconsistente. Así la garantía
-es estructural: se aplican ambas o ninguna.
+### Auditoría
+
+**La bitácora se escribe dentro del procedimiento almacenado, no desde la aplicación.** Cada
+procedimiento de escritura modifica al cliente y registra la acción en la misma transacción. Si el
+registro se hiciera con una llamada separada, bastaría con que una ruta nueva olvidara invocarla
+para que la auditoría tuviera huecos, y un fallo entre ambas operaciones dejaría la base
+inconsistente. Así la garantía es estructural: se aplican ambas o ninguna.
 
 **`Bitacora.ClienteId` no tiene clave foránea.** La bitácora es el registro de auditoría del
 sistema, no el histórico de una entidad concreta. Clientes es lo primero que se audita, no lo
@@ -122,11 +122,50 @@ una acción auditada debe existir, y el sistema no ofrece borrar usuarios.
 usuario *de la aplicación* originó el cambio: solo ve la cuenta con la que se conecta el pool de
 conexiones.
 
-**Control de concurrencia optimista en `Clientes`.** No es una preocupación teórica: varios
-operadores trabajando a la vez sobre el mismo registro de cliente es el modo de operación normal
-en ese tipo de institución. La columna `ROWVERSION` que compara el procedimiento de actualización
-evita que el segundo guardado sobrescriba en silencio el cambio del primero; el que llega después
-recibe un aviso en lugar de perder su información sin saberlo.
+**Campos de auditoría y borrado lógico.** `Clientes` registra quién creó el registro, quién lo
+modificó por última vez y cuándo, y si fue borrado. Los campos viven en una clase base,
+`EntidadAuditable`, de la que hereda `Cliente`: no describen a un cliente, describen el hecho de
+haber sido guardado, así que una entidad nueva los obtiene sin volver a declararlos. Las columnas
+de "quién" no llevan clave foránea hacia `Usuarios`, por el mismo criterio que `NombreUsuario`:
+registran quién hizo la acción en el momento de hacerla, y ese hecho no deja de ser cierto si el
+usuario se elimina después.
+
+El borrado es lógico. `usp_Cliente_Eliminar` marca la fila en lugar de ejecutar `DELETE`: el
+registro deja de existir para la aplicación —ningún listado ni `ObtenerPorId` lo devuelven— pero
+la fila permanece y solo soporte puede recuperarla desde la base. Un borrado físico destruiría el
+extremo de relaciones que quizá ya no se pueden reconstruir, y dejaría a la bitácora sin nada
+contra qué contrastar.
+
+Conviene no confundir dos conceptos que a veces se colapsan en una sola columna: *eliminado*
+significa que el registro no debe volver a aparecer y solo soporte lo revierte; un estado de
+negocio como *inactivo* significaría que el registro sigue siendo válido pero no debe ofrecerse en
+ciertos lugares, y lo alternaría el usuario en ambos sentidos. Aquí solo existe el primero, porque
+es el que corresponde a la acción de eliminar que pide el enunciado.
+
+El índice único de `Documento` está filtrado por `Eliminado = 0`. Sin el filtro, borrar a un
+cliente bloquearía su DUI para siempre y nadie podría volver a registrarse con ese documento.
+
+### Consulta de datos
+
+**Paginación y ordenamiento en el motor.** El listado de clientes y la bitácora paginan con
+`OFFSET/FETCH` y devuelven el total en un parámetro de salida, en lugar de traer todas las filas y
+descartar las que no caben. El ordenamiento por columna no usa SQL dinámico: el nombre de columna
+llega como parámetro y se resuelve con expresiones `CASE`, de modo que un valor arbitrario no
+puede ejecutarse. El orden lleva siempre un desempate por clave primaria, sin el cual una fila
+podría intercambiarse entre páginas y no aparecer nunca.
+
+**El predicado de filtro vive en una función de tabla en línea.** Lo comparten la consulta de
+conteo y la de página, así que un paginador que no coincida con lo que muestra la rejilla deja de
+ser posible. La función es en línea y no multiinstrucción para que el optimizador la expanda
+dentro del plan de ejecución en lugar de materializar un resultado intermedio.
+
+**Control de concurrencia optimista en `Clientes`.** No es una preocupación teórica: en un
+mantenimiento usado por varios operadores, dos personas abriendo el mismo cliente es lo normal. La
+columna `ROWVERSION` que compara el procedimiento de actualización evita que el segundo guardado
+sobrescriba en silencio el cambio del primero; el que llega después recibe un aviso en lugar de
+perder su información sin saberlo.
+
+### Autenticación y control de acceso
 
 **PBKDF2 en lugar de un hash simple con salt.** Un hash rápido, aunque lleve salt, se ataca por
 fuerza bruta con GPU. Se usa `Rfc2898DeriveBytes` con HMAC-SHA256 y 100000 iteraciones, salt de
@@ -156,18 +195,7 @@ despliegue que copie la configuración tal cual. Se prefiere que un reinicio del
 volver a iniciar sesión. En un despliegue real la clave se fija fuera del control de versiones,
 por configuración del servidor.
 
-## Mejoras posteriores a la primera versión
-
-**Paginación y ordenamiento en el motor.** El listado de clientes y la bitácora paginan con
-`OFFSET/FETCH` y devuelven el total en un parámetro de salida, en lugar de traer todas las filas
-y descartar las que no caben. El ordenamiento por columna no usa SQL dinámico: el nombre de
-columna llega como parámetro y se resuelve con expresiones `CASE`, de modo que un valor
-arbitrario no puede ejecutarse. El orden lleva siempre un desempate por clave primaria, sin el
-cual una fila podría intercambiarse entre páginas y no aparecer nunca.
-
-**Control de concurrencia optimista.** `Clientes` tiene una columna `ROWVERSION` que el
-procedimiento de actualización compara. Si dos usuarios abren el mismo cliente y ambos guardan,
-el segundo recibe un aviso en lugar de sobrescribir en silencio el cambio del primero.
+### Interfaz y operación
 
 **Transformaciones de configuración.** `Web.Release.config` quita `debug="true"` y fuerza
 `customErrors` a `On` al publicar. Se aplican al **publicar**, no al compilar: ejecutar en Release
@@ -177,50 +205,21 @@ desde Visual Studio no las dispara.
 cliente por nombre. Usa el Bootstrap que el proyecto ya sirve localmente, sin agregar
 dependencias. El nombre se inserta con `textContent` y no con `innerHTML`.
 
-**Registro con log4net.** Reemplaza la escritura manual a archivo. Rota por tamaño, conserva
-cinco archivos y permite cambiar destino y nivel sin recompilar. Registra los intentos de inicio
-de sesión fallidos con el nombre de usuario intentado, nunca con la contraseña.
+**Registro con log4net.** Rota por tamaño, conserva cinco archivos y permite cambiar destino y
+nivel sin recompilar, en lugar de escribir a archivo desde el código. Registra los intentos de
+inicio de sesión fallidos con el nombre de usuario intentado, nunca con la contraseña.
 
 **Arranque reproducible.** El puerto y la URL de IIS Express viven en el archivo de proyecto
 versionado en lugar del `.user`, que está ignorado. Cualquiera que clone el repositorio y presione
 F5 abre en la misma dirección, sin depender de un perfil de arranque local.
 
 **Respuesta entendible ante contenido no permitido.** La validación de petición de ASP.NET
-rechaza entradas que parecen marcado; la aplicación ahora explica el motivo en lugar de mostrar
-una página de error genérica. La validación no se relajó en ningún punto: no hay
+rechaza entradas que parecen marcado; la aplicación explica el motivo en lugar de mostrar una
+página de error genérica. La validación no se relajó en ningún punto: no hay
 `validateRequest="false"` y `requestValidationMode` no se tocó.
 
 **Indicador de ordenamiento.** La cabecera de la rejilla muestra por qué columna se está
 ordenando y en qué dirección, con una flecha y el atributo `aria-sort`.
-
-**Filtro de listados en funciones en línea.** El predicado de filtro se escribe una sola vez, en
-una función de tabla en línea, y lo comparten la consulta de conteo y la de página: un paginador
-que no coincida con lo que muestra la rejilla deja de ser posible. La función es en línea (no
-multiinstrucción) para que el optimizador la expanda dentro del plan de ejecución en lugar de
-materializar un resultado intermedio.
-
-**Campos de auditoría y borrado lógico.** `Clientes` registra quién creó el registro, quién lo
-modificó por última vez y cuándo, y si fue borrado. Los campos viven en una clase base,
-`EntidadAuditable`, de la que hereda `Cliente`: no describen a un cliente, describen el hecho de
-haber sido guardado, así que una entidad nueva los obtiene sin volver a declararlos. Las columnas
-de "quién" no llevan clave foránea hacia `Usuarios`, por el mismo criterio que `NombreUsuario` en
-la bitácora: registran quién hizo la acción en el momento de hacerla, y ese hecho no deja de ser
-cierto si el usuario se elimina después.
-
-El borrado es lógico. `usp_Cliente_Eliminar` marca la fila en lugar de ejecutar `DELETE`: el
-registro deja de existir para la aplicación —ningún listado ni `ObtenerPorId` lo devuelven— pero
-la fila permanece y solo soporte puede recuperarla desde la base. En un sistema que maneja cartera
-de crédito, un borrado físico destruye el extremo de relaciones que quizá ya no se pueden
-reconstruir.
-
-Conviene no confundir dos conceptos que a veces se colapsan en una sola columna: *eliminado*
-significa que el registro no debe volver a aparecer y solo soporte lo revierte; un estado de
-negocio como *inactivo* significaría que el registro sigue siendo válido pero no debe ofrecerse en
-ciertos lugares, y lo alternaría el usuario en ambos sentidos. Aquí solo existe el primero, porque
-es el que corresponde a la acción de eliminar que pide el enunciado.
-
-El índice único de `Documento` pasó a ser filtrado por `Eliminado = 0`. Sin el filtro, borrar a un
-cliente bloquearía su DUI para siempre y nadie podría volver a registrarse con ese documento.
 
 ## Qué generalizaría este diseño al crecer, y por qué todavía no
 

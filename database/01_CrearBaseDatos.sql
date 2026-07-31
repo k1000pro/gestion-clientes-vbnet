@@ -100,10 +100,10 @@ END
 GO
 
 /*
-    Migración de los campos de auditoría y del borrado lógico para bases anteriores. Las columnas
-    de "quién" son NULL y no llevan clave foránea a Usuarios: registran quién hizo la acción en el
-    momento en que se hizo, y ese hecho no debe dejar de ser cierto si el usuario se elimina
-    después. La bitácora aplica el mismo criterio con NombreUsuario.
+    Las columnas se agregan aparte para que el script repare una tabla creada por una corrida que
+    se interrumpió. Las de "quién" son NULL y no llevan clave foránea a Usuarios: registran quién
+    hizo la acción en el momento en que se hizo, y ese hecho no debe dejar de ser cierto si el
+    usuario se elimina después.
 */
 IF COL_LENGTH('dbo.Clientes', 'Eliminado') IS NULL
 BEGIN
@@ -126,8 +126,8 @@ GO
     podría volver a registrarse con ese documento aunque el registro anterior ya no exista para el
     negocio. Con el filtro, el documento se libera al borrar y sigue siendo único entre los vivos.
 
-    La guarda comprueba que el índice exista Y que esté filtrado, para que una base creada con la
-    versión anterior —donde el índice no tenía filtro— lo reemplace en lugar de conservarlo.
+    La guarda comprueba que el índice exista Y que esté filtrado: un índice sin filtro no sirve
+    aquí, así que se reemplaza en lugar de darlo por bueno.
 */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes
                WHERE name = 'UX_Clientes_Documento'
@@ -150,9 +150,9 @@ END
 GO
 
 /*
-    Migración para bases creadas antes de que existiera el control de concurrencia. Quien ya haya
-    ejecutado este script obtiene la columna sin perder datos; quien lo ejecute desde cero la
-    obtiene en el CREATE TABLE. SQL Server rellena el valor inicial de cada fila existente.
+    Igual que las columnas de auditoría: quien ejecute el script desde cero obtiene RowVersion en
+    el CREATE TABLE, y sobre una tabla ya creada se agrega sin perder datos. SQL Server rellena el
+    valor inicial de cada fila existente.
 */
 IF COL_LENGTH('dbo.Clientes', 'RowVersion') IS NULL
 BEGIN
@@ -571,11 +571,11 @@ BEGIN
         /*
             Borrado lógico. El registro deja de existir para la aplicación —no lo devuelve ningún
             listado ni ObtenerPorId— pero la fila permanece y solo soporte puede recuperarla desde
-            la base. En un sistema que maneja cartera de crédito, un DELETE físico destruye el
-            extremo de relaciones que quizá ya no se pueden reconstruir.
+            la base. Un DELETE físico destruiría el extremo de relaciones que quizá ya no se pueden
+            reconstruir.
 
-            El snapshot se toma antes, igual que cuando el borrado era físico: registra el estado
-            exacto en el momento de borrar, que es lo que interesa auditar.
+            El snapshot se toma antes del cambio: registra el estado exacto en el momento de
+            borrar, que es lo que interesa auditar.
         */
         UPDATE  dbo.Clientes
         SET     Eliminado        = 1,
