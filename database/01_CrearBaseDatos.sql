@@ -174,8 +174,10 @@ GO
     purga física que haga soporte algún día. Por eso el snapshot completo del registro queda en la
     columna Detalle: la bitácora no depende de que la fila original siga existiendo.
 
-    NombreUsuario se desnormaliza a propósito: preserva el valor histórico aunque el usuario
-    se renombre o se elimine después.
+    NombreUsuario se desnormaliza a propósito: preserva el nombre con el que el usuario actuó
+    aunque después se renombre. UsuarioId sí lleva clave foránea, porque el actor de una acción
+    auditada debe existir: la integridad importa más aquí que poder borrar usuarios, y el sistema
+    no ofrece esa operación. Si algún día la ofreciera, sería con baja lógica, no con DELETE.
 */
 IF OBJECT_ID('dbo.Bitacora', 'U') IS NULL
 BEGIN

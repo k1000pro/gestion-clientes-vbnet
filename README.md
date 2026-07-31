@@ -114,25 +114,13 @@ auditar a alguien. Además, la auditoría debe sobrevivir incluso a una purga f�
 soporte algún día, y por eso `Detalle` guarda el snapshot completo del registro: la bitácora no
 depende de que la fila original siga existiendo.
 
-**`NombreUsuario` está desnormalizado en la bitácora.** Preserva el valor histórico aunque el
-usuario se renombre o se elimine. `UsuarioId` se mantiene para poder unir con `Usuarios`.
+**`NombreUsuario` está desnormalizado en la bitácora.** Preserva el nombre con el que el usuario
+actuó aunque después se renombre. `UsuarioId` sí lleva clave foránea hacia `Usuarios`: el actor de
+una acción auditada debe existir, y el sistema no ofrece borrar usuarios.
 
 **Bitácora por procedimiento almacenado y no por trigger.** Un trigger no puede saber qué
 usuario *de la aplicación* originó el cambio: solo ve la cuenta con la que se conecta el pool de
 conexiones.
-
-**Los campos de auditoría viven en una clase base, `EntidadAuditable`.** No describen a un
-cliente ni a un usuario: describen el hecho de haber sido persistidos, y son los mismos para
-cualquier entidad que se guarde. Las columnas de "quién" no tienen clave foránea hacia
-`Usuarios` por el mismo criterio que `NombreUsuario` en la bitácora: registran quién hizo la
-acción en el momento de hacerla, y ese hecho no deja de ser cierto si el usuario se elimina
-después.
-
-**El borrado de clientes es lógico, y no es lo mismo que un estado de negocio.** Un cliente
-"inactivo" sigue siendo un registro válido que simplemente no se ofrece en ciertos lugares, y el
-usuario lo alterna en ambos sentidos; uno eliminado no debe volver a aparecer, y solo soporte
-puede revertirlo desde la base de datos. Son dos conceptos distintos y por eso no comparten
-columna.
 
 **Control de concurrencia optimista en `Clientes`.** No es una preocupación teórica: varios
 operadores trabajando a la vez sobre el mismo registro de cliente es el modo de operación normal
@@ -214,7 +202,10 @@ materializar un resultado intermedio.
 **Campos de auditoría y borrado lógico.** `Clientes` registra quién creó el registro, quién lo
 modificó por última vez y cuándo, y si fue borrado. Los campos viven en una clase base,
 `EntidadAuditable`, de la que hereda `Cliente`: no describen a un cliente, describen el hecho de
-haber sido guardado, así que una entidad nueva los obtiene sin volver a declararlos.
+haber sido guardado, así que una entidad nueva los obtiene sin volver a declararlos. Las columnas
+de "quién" no llevan clave foránea hacia `Usuarios`, por el mismo criterio que `NombreUsuario` en
+la bitácora: registran quién hizo la acción en el momento de hacerla, y ese hecho no deja de ser
+cierto si el usuario se elimina después.
 
 El borrado es lógico. `usp_Cliente_Eliminar` marca la fila en lugar de ejecutar `DELETE`: el
 registro deja de existir para la aplicación —ningún listado ni `ObtenerPorId` lo devuelven— pero

@@ -1,13 +1,11 @@
 ﻿Imports System.Globalization
+Imports System.Web.Configuration
 Imports System.Web.Security
 Imports GestionClientes.Negocio
 
 ''' <summary>Pantalla de autenticación.</summary>
 Public Class PaginaLogin
     Inherits Page
-
-    ''' <summary>Debe coincidir con el timeout declarado en &lt;forms&gt; de Web.config.</summary>
-    Private Const DuracionTicketEnMinutos As Integer = 30
 
     Private Shared ReadOnly Registro As log4net.ILog = log4net.LogManager.GetLogger(GetType(PaginaLogin))
 
@@ -52,15 +50,16 @@ Public Class PaginaLogin
     Private Sub IniciarSesion(usuarioId As Integer, nombreUsuario As String, nombreCompleto As String)
         Session.Clear()
         Session.Abandon()
-        Response.Cookies.Add(New HttpCookie("ASP.NET_SessionId", String.Empty))
+        CaducarCookieDeSesion()
 
         ' El primer argumento es la versión del formato del ticket: es informativo y no afecta al
-        ' cifrado ni a la validación.
+        ' cifrado ni a la validación. La vigencia se toma de <forms timeout> para no declararla
+        ' dos veces.
         Dim ticket As New FormsAuthenticationTicket(
             2,
             nombreUsuario,
             DateTime.Now,
-            DateTime.Now.AddMinutes(DuracionTicketEnMinutos),
+            DateTime.Now.Add(FormsAuthentication.Timeout),
             False,
             usuarioId.ToString(CultureInfo.InvariantCulture) & "|" & nombreCompleto,
             FormsAuthentication.FormsCookiePath)
@@ -78,6 +77,21 @@ Public Class PaginaLogin
         Dim destino = FormsAuthentication.GetRedirectUrl(nombreUsuario, False)
         Response.Redirect(destino, False)
         Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    ' Session.Abandon() por sí solo puede dejar que el navegador reenvíe el mismo identificador,
+    ' así que la cookie se caduca explícitamente: es lo que cierra la fijación de sesión. El
+    ' nombre se lee de la configuración porque <sessionState cookieName> puede cambiarlo.
+    Private Sub CaducarCookieDeSesion()
+        Dim seccion = TryCast(WebConfigurationManager.GetSection("system.web/sessionState"), SessionStateSection)
+        Dim nombre = If(seccion Is Nothing OrElse String.IsNullOrEmpty(seccion.CookieName),
+                        "ASP.NET_SessionId", seccion.CookieName)
+
+        Response.Cookies.Add(New HttpCookie(nombre, String.Empty) With {
+            .Expires = DateTime.Now.AddDays(-1),
+            .HttpOnly = True,
+            .Path = "/"
+        })
     End Sub
 
     Private Sub MostrarAviso(mensaje As String)
