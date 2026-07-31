@@ -10,16 +10,10 @@
 */
 
 /*
-    QUOTED_IDENTIFIER y ANSI_NULLS deben estar activos para todo el script.
-
-    El índice único de Documento es filtrado, y SQL Server exige QUOTED_IDENTIFIER ON tanto para
-    crearlo como para cualquier INSERT o UPDATE sobre la tabla que lo tiene. Además, los
-    procedimientos almacenados congelan estas opciones en el momento de crearse: uno creado con
-    QUOTED_IDENTIFIER OFF falla en ejecución con el error 1934 al tocar esa tabla.
-
-    Hace falta declararlo porque los valores por omisión no coinciden entre herramientas: SSMS
-    conecta con QUOTED_IDENTIFIER ON y sqlcmd con OFF. Sin estas líneas el script funciona al
-    ejecutarlo desde SSMS y falla desde la línea de comandos.
+    El índice filtrado de Documento exige QUOTED_IDENTIFIER ON para crearlo y para cualquier
+    escritura sobre la tabla, y los procedimientos congelan la opción al crearse (error 1934).
+    Hay que declararlo porque SSMS conecta con ON y sqlcmd con OFF: sin estas líneas el script
+    funciona desde SSMS y falla desde la línea de comandos.
 */
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
@@ -58,11 +52,9 @@ END
 GO
 
 /*
-    Los índices se crean fuera del guard de su tabla, cada uno con su propia comprobación.
-    Si estuvieran dentro, una corrida previa que hubiera creado la tabla pero se hubiera
-    interrumpido antes del índice dejaría la base sin la restricción de unicidad, y toda
-    reejecución posterior saltaría el bloque entero al ver que la tabla ya existe. El script
-    diría "ya existe" y la base quedaría sin su índice único, en silencio.
+    Cada índice se comprueba aparte del CREATE TABLE. Dentro del mismo guard, una corrida
+    interrumpida entre tabla e índice dejaría la base sin la restricción de unicidad para siempre:
+    toda reejecución saltaría el bloque al ver que la tabla ya existe.
 */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes
                WHERE name = 'UX_Usuarios_NombreUsuario' AND object_id = OBJECT_ID('dbo.Usuarios'))
@@ -100,10 +92,9 @@ END
 GO
 
 /*
-    Las columnas se agregan aparte para que el script repare una tabla creada por una corrida que
-    se interrumpió. Las de "quién" son NULL y no llevan clave foránea a Usuarios: registran quién
-    hizo la acción en el momento en que se hizo, y ese hecho no debe dejar de ser cierto si el
-    usuario se elimina después.
+    Aparte del CREATE TABLE, por lo mismo que los índices. Las columnas de "quién" son NULL y sin
+    clave foránea a Usuarios: registran quién actuó en ese momento, y ese hecho sigue siendo
+    cierto si el usuario se elimina después.
 */
 IF COL_LENGTH('dbo.Clientes', 'Eliminado') IS NULL
 BEGIN
@@ -120,14 +111,9 @@ END
 GO
 
 /*
-    El índice de documento es único solo entre los clientes vigentes.
-
-    Sin el filtro, borrar lógicamente a un cliente dejaría su DUI bloqueado para siempre: nadie
-    podría volver a registrarse con ese documento aunque el registro anterior ya no exista para el
-    negocio. Con el filtro, el documento se libera al borrar y sigue siendo único entre los vivos.
-
-    La guarda comprueba que el índice exista Y que esté filtrado: un índice sin filtro no sirve
-    aquí, así que se reemplaza en lugar de darlo por bueno.
+    Único solo entre los clientes vigentes. Sin el filtro, borrar lógicamente a un cliente dejaría
+    su DUI bloqueado para siempre. La guarda exige que el índice exista Y esté filtrado: uno sin
+    filtro no sirve aquí, así que se reemplaza en lugar de darlo por bueno.
 */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes
                WHERE name = 'UX_Clientes_Documento'
@@ -149,11 +135,7 @@ BEGIN
 END
 GO
 
-/*
-    Igual que las columnas de auditoría: quien ejecute el script desde cero obtiene RowVersion en
-    el CREATE TABLE, y sobre una tabla ya creada se agrega sin perder datos. SQL Server rellena el
-    valor inicial de cada fila existente.
-*/
+/* Igual que las columnas de auditoría. SQL Server rellena el valor inicial de cada fila. */
 IF COL_LENGTH('dbo.Clientes', 'RowVersion') IS NULL
 BEGIN
     ALTER TABLE dbo.Clientes ADD [RowVersion] ROWVERSION NOT NULL;
@@ -163,21 +145,14 @@ GO
 
 /* ------------------------------------------------------------------ Bitacora */
 /*
-    Bitacora.ClienteId NO lleva clave foránea hacia Clientes de forma deliberada.
+    ClienteId NO lleva clave foránea hacia Clientes, deliberadamente. Esta tabla audita el sistema,
+    no el histórico de una entidad: una acción futura sobre configuración o sobre un acceso no
+    tiene cliente asociado. Y la auditoría debe sobrevivir a una purga física, por eso Detalle
+    guarda el snapshot completo del registro.
 
-    Esta tabla es el registro de auditoría del sistema, no el histórico de una entidad concreta.
-    Clientes es lo primero que se audita, no lo único que se auditará: mañana registra un cambio
-    de configuración o un acceso, acciones que no tienen cliente asociado. Una clave foránea la
-    ataría para siempre a la primera entidad que se le ocurrió auditar a alguien.
-
-    Y aunque el borrado de clientes hoy es lógico, la auditoría debe sobrevivir incluso a una
-    purga física que haga soporte algún día. Por eso el snapshot completo del registro queda en la
-    columna Detalle: la bitácora no depende de que la fila original siga existiendo.
-
-    NombreUsuario se desnormaliza a propósito: preserva el nombre con el que el usuario actuó
-    aunque después se renombre. UsuarioId sí lleva clave foránea, porque el actor de una acción
-    auditada debe existir: la integridad importa más aquí que poder borrar usuarios, y el sistema
-    no ofrece esa operación. Si algún día la ofreciera, sería con baja lógica, no con DELETE.
+    NombreUsuario se desnormaliza para preservar el nombre con el que el usuario actuó. UsuarioId
+    sí lleva clave foránea: el actor de una acción auditada debe existir, y el sistema no ofrece
+    borrar usuarios.
 */
 IF OBJECT_ID('dbo.Bitacora', 'U') IS NULL
 BEGIN
@@ -219,10 +194,7 @@ GO
    PROCEDIMIENTOS ALMACENADOS
    ================================================================== */
 
-/*
-    Devuelve el hash y el salt del usuario para que la aplicación verifique la contraseña.
-    La comparación NO se hace en SQL: el hash nunca viaja como criterio de búsqueda.
-*/
+/* La comparación no se hace en SQL: el hash nunca viaja como criterio de búsqueda. */
 CREATE OR ALTER PROCEDURE dbo.usp_Usuario_ObtenerPorNombre
     @NombreUsuario NVARCHAR(50)
 AS
@@ -242,15 +214,9 @@ END
 GO
 
 /*
-    Clientes que cumplen el filtro de búsqueda.
-
-    Existe para que el predicado se escriba una sola vez: el procedimiento de listado lo necesita
-    dos veces, una para contar y otra para traer la página, y dos copias pueden desincronizarse y
-    producir un paginador que no concuerda con la rejilla.
-
-    Es una función en línea a propósito. El optimizador la expande dentro del plan de la consulta
-    que la invoca, así que no materializa nada. Una función multi-sentencia o una tabla temporal
-    sí materializarían el conjunto completo, que es exactamente lo que la paginación evita.
+    El predicado se escribe una sola vez: el listado lo necesita para contar y para traer la
+    página, y dos copias pueden desincronizarse. En línea y no multi-sentencia para que el
+    optimizador la expanda dentro del plan en lugar de materializar el conjunto completo.
 */
 CREATE OR ALTER FUNCTION dbo.fn_Clientes_Filtrados
 (
@@ -277,14 +243,10 @@ RETURN
             c.[RowVersion]
     FROM    dbo.Clientes AS c
             /*
-                Los comodines que el usuario escriba se tratan como texto literal. Sin esto,
-                teclear % en el buscador devuelve todos los clientes y _ actúa como comodín de un
-                carácter, que no es lo que nadie espera de una caja de búsqueda. Se escapa primero
-                la propia barra invertida, porque hacerlo después volvería a escapar las que
-                introducen los reemplazos siguientes.
-
-                El patrón se calcula una sola vez con CROSS APPLY en lugar de repetirlo en cada
-                comparación: una función en línea no admite DECLARE.
+                Los comodines que teclee el usuario se tratan como texto literal. La barra inversa
+                se escapa primero, porque hacerlo después volvería a escapar las que introducen los
+                reemplazos siguientes. El patrón se calcula una vez con CROSS APPLY: una función en
+                línea no admite DECLARE.
             */
             CROSS APPLY (VALUES (
                 '%' +
@@ -297,10 +259,8 @@ RETURN
                 + '%'
             )) AS f(Patron)
     /*
-        Los clientes borrados lógicamente no existen para el negocio. El paréntesis alrededor de
-        las alternativas de búsqueda es obligatorio: AND liga más fuerte que OR, así que sin él el
-        filtro de borrado solo aplicaría a la primera alternativa y los borrados reaparecerían en
-        cuanto alguien buscara por apellido.
+        El paréntesis es obligatorio: AND liga más fuerte que OR, así que sin él el filtro de
+        borrado solo aplicaría a la primera alternativa y los borrados reaparecerían al buscar.
     */
     WHERE   c.Eliminado = 0
             AND (
@@ -314,16 +274,13 @@ RETURN
 GO
 
 /*
-    Lista clientes con filtro, ordenamiento y paginación en el motor.
+    @TotalRegistros sale por parámetro de salida para que la interfaz dibuje el paginador sin una
+    segunda consulta.
 
-    La paginación se hace aquí y no en la interfaz: devolver todas las filas para mostrar diez
-    obliga a transportarlas y materializarlas enteras. @TotalRegistros sale por parámetro de
-    salida para que la interfaz pueda dibujar el paginador sin una segunda consulta.
-
-    El ordenamiento NO usa SQL dinámico. @Orden llega como texto pero nunca se concatena en la
-    consulta: se resuelve con expresiones CASE, de modo que un valor arbitrario no puede
-    ejecutarse. Se usa una expresión por columna y dirección porque un CASE devuelve un solo
-    tipo, y mezclar NVARCHAR con DATETIME2 forzaría conversiones implícitas.
+    El ordenamiento no usa SQL dinámico: @Orden llega como texto pero nunca se concatena, se
+    resuelve con expresiones CASE, así que un valor arbitrario no puede ejecutarse. Una expresión
+    por columna y dirección porque un CASE devuelve un solo tipo, y mezclar NVARCHAR con DATETIME2
+    forzaría conversiones implícitas.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Listar
     @Busqueda       NVARCHAR(100) = NULL,
@@ -407,9 +364,8 @@ END
 GO
 
 /*
-    Inserta un cliente y registra la acción en la bitácora dentro de la misma transacción.
-    Si cualquiera de las dos operaciones falla, no se aplica ninguna: la auditoría no puede
-    quedar desincronizada de los datos.
+    El cliente y su entrada de bitácora se escriben en la misma transacción: si falla una, no se
+    aplica ninguna. La auditoría no puede desincronizarse de los datos.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Insertar
     @Nombres       NVARCHAR(100),
@@ -460,12 +416,9 @@ END
 GO
 
 /*
-    Actualiza un cliente y registra el cambio en la bitácora, en la misma transacción.
-
-    El UPDATE filtra además por RowVersion. Si otra sesión modificó la fila desde que este usuario
-    la cargó, el valor ya no coincide, no se actualiza ninguna fila y se lanza 50003. Sin esa
-    comparación, el segundo en guardar sobrescribe el cambio del primero con los valores que tenía
-    en pantalla, y nadie se entera.
+    El UPDATE filtra también por RowVersion: si otra sesión modificó la fila desde que este usuario
+    la cargó, el valor ya no coincide, no se actualiza nada y se lanza 50003. Sin esa comparación,
+    el segundo en guardar sobrescribe el cambio del primero y nadie se entera.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Actualizar
     @ClienteId     INT,
@@ -538,10 +491,7 @@ BEGIN
 END
 GO
 
-/*
-    Elimina un cliente. El snapshot completo del registro se guarda en la bitácora ANTES
-    del DELETE, porque después ya no habría de dónde recuperarlo.
-*/
+/* El snapshot se guarda antes del cambio: después ya no habría de dónde recuperarlo. */
 CREATE OR ALTER PROCEDURE dbo.usp_Cliente_Eliminar
     @ClienteId     INT,
     @UsuarioId     INT,
@@ -569,13 +519,9 @@ BEGIN
         VALUES ('ELIMINAR', @ClienteId, @UsuarioId, @NombreUsuario, @Detalle);
 
         /*
-            Borrado lógico. El registro deja de existir para la aplicación —no lo devuelve ningún
-            listado ni ObtenerPorId— pero la fila permanece y solo soporte puede recuperarla desde
-            la base. Un DELETE físico destruiría el extremo de relaciones que quizá ya no se pueden
-            reconstruir.
-
-            El snapshot se toma antes del cambio: registra el estado exacto en el momento de
-            borrar, que es lo que interesa auditar.
+            Borrado lógico: el registro deja de existir para la aplicación pero la fila permanece,
+            y solo soporte puede recuperarla. Un DELETE físico destruiría el extremo de relaciones
+            que quizá ya no se pueden reconstruir.
         */
         UPDATE  dbo.Clientes
         SET     Eliminado        = 1,
@@ -593,10 +539,7 @@ BEGIN
 END
 GO
 
-/*
-    Entradas de bitácora que cumplen los filtros. Existe por la misma razón que
-    dbo.fn_Clientes_Filtrados: que el predicado se escriba una sola vez.
-*/
+/* Por la misma razón que fn_Clientes_Filtrados: que el predicado se escriba una sola vez. */
 CREATE OR ALTER FUNCTION dbo.fn_Bitacora_Filtrada
 (
     @FechaDesde    DATETIME2(0),
@@ -624,9 +567,8 @@ RETURN
 GO
 
 /*
-    Consulta la bitácora con filtros, ordenamiento y paginación en el motor. Importa más aquí que
-    en clientes: cada fila lleva un Detalle NVARCHAR(MAX) con el JSON del cambio, así que traer
-    la tabla entera para mostrar quince filas es especialmente costoso.
+    Paginar importa más aquí que en clientes: cada fila lleva un Detalle NVARCHAR(MAX) con el JSON
+    del cambio, así que traer la tabla entera para mostrar quince filas sale caro.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Bitacora_Listar
     @FechaDesde     DATETIME2(0) = NULL,
@@ -670,10 +612,8 @@ END
 GO
 
 /*
-    Nombres de usuario distintos presentes en la bitácora, para poblar el filtro de la pantalla.
-
-    Existe como procedimiento propio porque, con la consulta principal ya paginada, derivar la
-    lista recorriendo una página daría un desplegable incompleto.
+    Para poblar el filtro de la pantalla. Tiene procedimiento propio porque, con la consulta
+    principal paginada, derivar la lista de una página daría un desplegable incompleto.
 */
 CREATE OR ALTER PROCEDURE dbo.usp_Bitacora_ListarUsuarios
 AS

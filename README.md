@@ -106,6 +106,9 @@ registro se hiciera con una llamada separada, bastaría con que una ruta nueva o
 para que la auditoría tuviera huecos, y un fallo entre ambas operaciones dejaría la base
 inconsistente. Así la garantía es estructural: se aplican ambas o ninguna.
 
+**Tampoco por trigger.** Un trigger no puede saber qué usuario *de la aplicación* originó el
+cambio: solo ve la cuenta con la que se conecta el pool de conexiones.
+
 **`Bitacora.ClienteId` no tiene clave foránea.** La bitácora es el registro de auditoría del
 sistema, no el histórico de una entidad concreta. Clientes es lo primero que se audita, no lo
 único que se auditará: una acción futura sobre configuración o sobre un acceso no tiene cliente
@@ -117,10 +120,6 @@ depende de que la fila original siga existiendo.
 **`NombreUsuario` está desnormalizado en la bitácora.** Preserva el nombre con el que el usuario
 actuó aunque después se renombre. `UsuarioId` sí lleva clave foránea hacia `Usuarios`: el actor de
 una acción auditada debe existir, y el sistema no ofrece borrar usuarios.
-
-**Bitácora por procedimiento almacenado y no por trigger.** Un trigger no puede saber qué
-usuario *de la aplicación* originó el cambio: solo ve la cuenta con la que se conecta el pool de
-conexiones.
 
 **Campos de auditoría y borrado lógico.** `Clientes` registra quién creó el registro, quién lo
 modificó por última vez y cuándo, y si fue borrado. Los campos viven en una clase base,
@@ -251,10 +250,10 @@ El criterio que se siguió es extraer cuando hay dos usos reales, no cuando podr
 - **CSRF:** `ViewStateUserKey` vinculado al identificador de sesión, con MAC y cifrado de
   ViewState activos.
 - **Enumeración de usuarios:** el login responde el mismo mensaje ante usuario inexistente,
-  contraseña incorrecta y usuario inactivo, y además calcula un hash señuelo cuando el usuario no
-  existe, de modo que las tres rutas tarden lo mismo. El mensaje uniforme por sí solo no basta:
-  sin el señuelo, la diferencia de tiempo entre responder al instante y ejecutar 100000
-  iteraciones de PBKDF2 revelaría qué cuentas existen.
+  contraseña incorrecta y usuario inactivo, y calcula un hash señuelo en los dos primeros casos
+  para que las tres rutas tarden lo mismo. El mensaje uniforme por sí solo no basta: sin el
+  señuelo, la diferencia entre responder al instante y ejecutar 100000 iteraciones de PBKDF2
+  revelaría qué cuentas existen.
 - **XSS:** los datos se renderizan con controles que codifican HTML; los mensajes se codifican
   de forma explícita.
 - **Fuga de información:** `customErrors` está en `RemoteOnly`: un cliente remoto solo recibe la
