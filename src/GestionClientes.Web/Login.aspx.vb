@@ -13,7 +13,7 @@ Public Class PaginaLogin
 
     Private ReadOnly _autenticacion As New ServicioAutenticacion()
 
-    ''' <summary>Vincula el ViewState a la sesión para proteger el postback del login.</summary>
+    ' Vincula el ViewState a la sesión para proteger el postback del login.
     Protected Overrides Sub OnInit(e As EventArgs)
         ViewStateUserKey = Session.SessionID
         MyBase.OnInit(e)
@@ -45,17 +45,10 @@ Public Class PaginaLogin
         IniciarSesion(usuario.UsuarioId, usuario.NombreUsuario, usuario.NombreCompleto)
     End Sub
 
-    ''' <summary>
-    ''' Establece la sesión autenticada.
-    '''
-    ''' La sesión anterior se descarta y su cookie se borra antes de emitir la identidad nueva:
-    ''' un identificador de sesión que un tercero ya conociera deja así de ser válido en el
-    ''' momento en que el usuario se autentica, que es la defensa contra la fijación de sesión.
-    '''
-    ''' Por eso mismo el identificador y el nombre del usuario NO se guardan en Session: la sesión
-    ''' acaba de descartarse y cualquier valor escrito ahora se perdería al terminar la petición.
-    ''' Viajan dentro del ticket de autenticación, que va firmado y cifrado.
-    ''' </summary>
+    ' La sesión anterior se descarta y su cookie se borra antes de emitir la identidad nueva:
+    ' un identificador que un tercero ya conociera deja de ser válido justo al autenticarse, que
+    ' es la defensa contra la fijación de sesión. Por eso la identidad viaja en el ticket y no
+    ' en Session: lo que se escribiera ahora se perdería al terminar la petición.
     Private Sub IniciarSesion(usuarioId As Integer, nombreUsuario As String, nombreCompleto As String)
         Session.Clear()
         Session.Abandon()
@@ -92,10 +85,8 @@ Public Class PaginaLogin
         pnlAviso.Visible = True
     End Sub
 
-    ''' <summary>
-    ''' Prepara un valor recibido del usuario para escribirlo en un registro de líneas. Sin esto,
-    ''' un salto de línea en el nombre de usuario permitiría fabricar entradas de log falsas.
-    ''' </summary>
+    ' Sin esto, un salto de línea en el nombre de usuario permitiría fabricar entradas de log
+    ' falsas.
     Private Shared Function ParaRegistro(valor As String) As String
         If String.IsNullOrEmpty(valor) Then Return String.Empty
 

@@ -2,9 +2,8 @@ Imports System.Text.RegularExpressions
 Imports GestionClientes.Entidades
 
 ''' <summary>
-''' Valida los datos de un cliente. Esta es la única fuente de verdad de las reglas: los
-''' validadores de la interfaz web son una comodidad para el usuario, no un control de
-''' seguridad, porque un cliente HTTP puede omitirlos por completo.
+''' Única fuente de verdad de las reglas de validación de un cliente. Los validadores de la
+''' interfaz web son una comodidad para el usuario, no un control de seguridad.
 ''' </summary>
 Public NotInheritable Class ValidadorCliente
 
@@ -13,26 +12,22 @@ Public NotInheritable Class ValidadorCliente
     Private Const LargoMaximoEmail As Integer = 150
     Private Const LargoMaximoDireccion As Integer = 250
 
-    ''' <summary>Documento Único de Identidad salvadoreño: ocho dígitos, guion, un dígito.</summary>
+    ' Documento Único de Identidad salvadoreño: ocho dígitos, guion, un dígito.
     Private Shared ReadOnly PatronDocumento As New Regex("^\d{8}-\d$", RegexOptions.Compiled)
 
-    ''' <summary>Teléfono salvadoreño en formato ####-####.</summary>
+    ' Teléfono salvadoreño en formato ####-####.
     Private Shared ReadOnly PatronTelefono As New Regex("^\d{4}-\d{4}$", RegexOptions.Compiled)
 
-    ''' <summary>
-    ''' Validación de correo deliberadamente permisiva. Validar RFC 5322 completo con expresión
-    ''' regular es una fuente conocida de falsos negativos; aquí solo se descartan las formas
-    ''' claramente inválidas.
-    ''' </summary>
+    ' Permisiva a propósito: validar RFC 5322 con expresión regular es una fuente conocida de
+    ' falsos negativos. Solo se descartan las formas claramente inválidas.
     Private Shared ReadOnly PatronEmail As New Regex("^[^@\s]+@[^@\s]+\.[^@\s]{2,}$", RegexOptions.Compiled)
 
     Private Sub New()
     End Sub
 
     ''' <summary>
-    ''' Devuelve la lista de errores encontrados. Una lista vacía significa que el cliente es
-    ''' válido. Se acumulan todos los errores en lugar de devolver el primero, para que el
-    ''' usuario pueda corregir el formulario de una sola vez.
+    ''' Errores encontrados; una lista vacía significa que el cliente es válido. Se acumulan todos
+    ''' en lugar de devolver el primero, para corregir el formulario de una sola vez.
     ''' </summary>
     Public Shared Function Validar(cliente As Cliente) As List(Of String)
         Dim errores As New List(Of String)()

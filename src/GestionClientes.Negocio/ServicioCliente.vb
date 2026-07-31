@@ -18,11 +18,7 @@ Public Class ServicioCliente
         Return _clientes.ObtenerPorId(clienteId)
     End Function
 
-    ''' <summary>
-    ''' Guarda un cliente: lo inserta si ClienteId es 0, lo actualiza en caso contrario.
-    ''' La validación ocurre aquí y no en la página, porque la página no es el único punto de
-    ''' entrada posible y los validadores del navegador se pueden omitir.
-    ''' </summary>
+    ''' <summary>Inserta si ClienteId es 0, actualiza en caso contrario.</summary>
     Public Function Guardar(cliente As Cliente, usuarioId As Integer, nombreUsuario As String) As ResultadoOperacion
         Dim errores = ValidadorCliente.Validar(cliente)
 

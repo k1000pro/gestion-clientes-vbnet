@@ -13,16 +13,13 @@ Public Class PaginaCambiadaEventArgs
 End Class
 
 ''' <summary>
-''' Paginador reutilizable con aspecto de Bootstrap.
-'''
-''' Existe como control propio porque las dos pantallas que paginan necesitan exactamente el
-''' mismo comportamiento, y porque el paginador integrado de GridView asume que la rejilla tiene
-''' todas las filas en memoria, que es justamente lo que se dejó de hacer.
+''' Paginador reutilizable con aspecto de Bootstrap. No se usa el de GridView porque asume que la
+''' rejilla tiene todas las filas en memoria, que es justo lo que se dejó de hacer.
 ''' </summary>
 Public Class Paginador
     Inherits UserControl
 
-    ''' <summary>Números de página que se muestran alrededor de la actual.</summary>
+    ' Números de página que se muestran alrededor de la actual.
     Private Const VentanaDePaginas As Integer = 5
 
     Public Event PaginaCambiada As EventHandler(Of PaginaCambiadaEventArgs)
@@ -39,8 +36,7 @@ Public Class Paginador
     End Property
 
     ''' <summary>
-    ''' Ajusta el paginador a un resultado y lo dibuja. Se oculta cuando todo cabe en una página:
-    ''' un paginador de una sola página es ruido.
+    ''' Ajusta el paginador a un resultado y lo dibuja. Se oculta cuando todo cabe en una página.
     ''' </summary>
     Public Sub Configurar(Of T)(resultado As ResultadoPaginado(Of T))
         If resultado Is Nothing Then
@@ -79,10 +75,8 @@ Public Class Paginador
         rptPaginas.DataBind()
     End Sub
 
-    ''' <summary>
-    ''' Números de página a mostrar: una ventana centrada en la actual, recortada a los extremos
-    ''' para que siempre se ofrezcan tantas opciones como haya páginas disponibles.
-    ''' </summary>
+    ' Ventana centrada en la página actual, recortada a los extremos para ofrecer siempre tantas
+    ' opciones como páginas haya.
     Private Function CalcularVentana() As List(Of Integer)
         Dim mitad = VentanaDePaginas \ 2
         Dim inicio = Math.Max(1, PaginaActual - mitad)
@@ -98,7 +92,6 @@ Public Class Paginador
         Return paginas
     End Function
 
-    ''' <summary>Marca visualmente la página actual y desactiva su enlace.</summary>
     Protected Sub rptPaginas_ItemDataBound(sender As Object, e As RepeaterItemEventArgs) Handles rptPaginas.ItemDataBound
         If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Return
 
@@ -114,7 +107,7 @@ Public Class Paginador
         End If
     End Sub
 
-    ''' <summary>Traduce cualquier clic del paginador en un único evento hacia la página.</summary>
+    ' Traduce cualquier clic del paginador en un único evento hacia la página.
     Protected Sub Paginador_ItemCommand(sender As Object, e As CommandEventArgs) Handles lnkAnterior.Command, lnkSiguiente.Command, rptPaginas.ItemCommand
         If e.CommandName <> "Ir" Then Return
 

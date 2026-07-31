@@ -121,6 +121,19 @@ usuario se renombre o se elimine. `UsuarioId` se mantiene para poder unir con `U
 usuario *de la aplicación* originó el cambio: solo ve la cuenta con la que se conecta el pool de
 conexiones.
 
+**Los campos de auditoría viven en una clase base, `EntidadAuditable`.** No describen a un
+cliente ni a un usuario: describen el hecho de haber sido persistidos, y son los mismos para
+cualquier entidad que se guarde. Las columnas de "quién" no tienen clave foránea hacia
+`Usuarios` por el mismo criterio que `NombreUsuario` en la bitácora: registran quién hizo la
+acción en el momento de hacerla, y ese hecho no deja de ser cierto si el usuario se elimina
+después.
+
+**El borrado de clientes es lógico, y no es lo mismo que un estado de negocio.** Un cliente
+"inactivo" sigue siendo un registro válido que simplemente no se ofrece en ciertos lugares, y el
+usuario lo alterna en ambos sentidos; uno eliminado no debe volver a aparecer, y solo soporte
+puede revertirlo desde la base de datos. Son dos conceptos distintos y por eso no comparten
+columna.
+
 **Control de concurrencia optimista en `Clientes`.** No es una preocupación teórica: varios
 operadores trabajando a la vez sobre el mismo registro de cliente es el modo de operación normal
 en ese tipo de institución. La columna `ROWVERSION` que compara el procedimiento de actualización

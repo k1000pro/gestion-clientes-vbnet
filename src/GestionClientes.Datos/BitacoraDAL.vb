@@ -3,9 +3,9 @@ Imports System.Data.SqlClient
 Imports GestionClientes.Entidades
 
 ''' <summary>
-''' Acceso de solo lectura a la bitácora. No expone métodos de escritura ni de borrado a
-''' propósito: las entradas las genera exclusivamente el procedimiento almacenado que modifica al
-''' cliente, y un registro de auditoría que la aplicación pueda alterar no sirve como auditoría.
+''' Acceso de solo lectura a la bitácora. Sin métodos de escritura ni de borrado a propósito: las
+''' entradas las genera el procedimiento almacenado que modifica al cliente, y un registro de
+''' auditoría que la aplicación pueda alterar no sirve como auditoría.
 ''' </summary>
 Public Class BitacoraDAL
 
@@ -67,10 +67,8 @@ Public Class BitacoraDAL
     End Function
 
     ''' <summary>
-    ''' Nombres de usuario distintos presentes en la bitácora, para poblar el filtro.
-    '''
-    ''' Consulta su propio procedimiento en lugar de derivar la lista de un listado paginado, que
-    ''' solo vería una página y daría un desplegable incompleto.
+    ''' Nombres de usuario distintos presentes en la bitácora, para poblar el filtro. Tiene su
+    ''' propio procedimiento porque derivarlos del listado paginado daría solo los de una página.
     ''' </summary>
     Public Function ObtenerUsuarios() As List(Of String)
         Dim usuarios As New List(Of String)()

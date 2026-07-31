@@ -8,7 +8,6 @@ Public Class PaginaBitacora
 
     Private ReadOnly _bitacora As New ServicioBitacora()
 
-    ''' <summary>Tamaño de página de la bitácora.</summary>
     Private Const TamanoPaginaBitacora As Integer = 15
 
     Private Property PaginaActual As Integer
@@ -51,7 +50,7 @@ Public Class PaginaBitacora
         End If
     End Sub
 
-    ''' <summary>Puebla el filtro de usuarios con los que efectivamente aparecen en la bitácora.</summary>
+    ' Solo los usuarios que efectivamente aparecen en la bitácora.
     Private Sub CargarUsuarios()
         ddlUsuario.Items.Clear()
         ddlUsuario.Items.Add(New ListItem("Todos", String.Empty))
@@ -110,10 +109,8 @@ Public Class PaginaBitacora
         MarcarCabeceraOrdenada(e.Row, OrdenActual, DescendenteActual)
     End Sub
 
-    ''' <summary>
-    ''' Arma el filtro a partir de los controles. Devuelve Nothing y muestra un aviso si el rango
-    ''' de fechas está invertido, en lugar de consultar sabiendo que no devolverá nada.
-    ''' </summary>
+    ' Devuelve Nothing y avisa si el rango de fechas está invertido, en lugar de consultar
+    ' sabiendo que no devolverá nada.
     Private Function ConstruirFiltro() As FiltroBitacora
         Dim filtro As New FiltroBitacora With {
             .Accion = ddlAccion.SelectedValue,

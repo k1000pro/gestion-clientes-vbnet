@@ -3,31 +3,23 @@ Imports System.Data
 Imports System.Data.SqlClient
 Imports GestionClientes.Entidades
 
-''' <summary>
-''' Utilidades compartidas por la capa de acceso a datos: obtención de la cadena de conexión,
-''' creación de comandos y traducción de errores del motor.
-'''
-''' Es Friend a propósito: nada fuera de esta capa debe poder crear comandos SQL.
-''' </summary>
+' Friend a propósito: nada fuera de la capa de datos debe poder crear comandos SQL.
 Friend NotInheritable Class SqlHelper
 
-    ''' <summary>Nombre de la entrada en connectionStrings del archivo de configuración.</summary>
     Private Const NombreCadenaConexion As String = "GestionClientes"
 
-    ''' <summary>Errores personalizados definidos en los procedimientos almacenados.</summary>
+    ' Errores personalizados definidos en los procedimientos almacenados.
     Private Const ErrorDocumentoDuplicado As Integer = 50001
     Private Const ErrorClienteNoEncontrado As Integer = 50002
     Private Const ErrorConflictoConcurrencia As Integer = 50003
 
-    ''' <summary>Violaciones de unicidad que reporta el propio motor.</summary>
+    ' Violaciones de unicidad que reporta el propio motor.
     Private Const ErrorIndiceUnicoDuplicado As Integer = 2601
     Private Const ErrorClaveDuplicada As Integer = 2627
 
     Private Sub New()
     End Sub
 
-    ''' <summary>Lee la cadena de conexión del archivo de configuración.</summary>
-    ''' <exception cref="ConfigurationErrorsException">Si la entrada no existe o está vacía.</exception>
     Friend Shared Function ObtenerCadenaConexion() As String
         Dim configuracion = ConfigurationManager.ConnectionStrings(NombreCadenaConexion)
 
@@ -39,10 +31,7 @@ Friend NotInheritable Class SqlHelper
         Return configuracion.ConnectionString
     End Function
 
-    ''' <summary>
-    ''' Crea un comando de procedimiento almacenado. Todos los accesos a datos pasan por aquí,
-    ''' lo que garantiza que ninguno pueda ejecutar texto SQL arbitrario.
-    ''' </summary>
+    ' Todo acceso a datos pasa por aquí, así ninguno puede ejecutar texto SQL arbitrario.
     Friend Shared Function CrearComando(conexion As SqlConnection, nombreProcedimiento As String) As SqlCommand
         Dim comando As New SqlCommand(nombreProcedimiento, conexion) With {
             .CommandType = CommandType.StoredProcedure,
@@ -52,11 +41,8 @@ Friend NotInheritable Class SqlHelper
         Return comando
     End Function
 
-    ''' <summary>
-    ''' Traduce los errores de negocio lanzados por los procedimientos almacenados a una
-    ''' excepción del dominio. Así la capa de negocio no necesita conocer SqlException ni los
-    ''' códigos de error de SQL Server. Los errores de infraestructura se dejan pasar tal cual.
-    ''' </summary>
+    ' Traduce errores del motor a excepciones del dominio, para que la capa de negocio no
+    ' necesite conocer SqlException ni los códigos de SQL Server.
     Friend Shared Function Traducir(ex As SqlException) As Exception
         Select Case ex.Number
 
@@ -82,32 +68,27 @@ Friend NotInheritable Class SqlHelper
         End Select
     End Function
 
-    ''' <summary>Lee una columna de texto tratando NULL como cadena vacía.</summary>
+    ' Trata NULL como cadena vacía.
     Friend Shared Function LeerTexto(lector As IDataRecord, columna As String) As String
         Dim indice = lector.GetOrdinal(columna)
         If lector.IsDBNull(indice) Then Return String.Empty
         Return lector.GetString(indice)
     End Function
 
-    ''' <summary>
-    ''' Lee una columna entera que admite nulos. Los campos de auditoría de quién hizo qué son
-    ''' nulos en los registros anteriores a que existieran, y confundir eso con un cero apuntaría
-    ''' a un usuario que no hizo nada.
-    ''' </summary>
+    ' Devuelve Nothing y no cero: los campos de auditoría son nulos en los registros anteriores
+    ' a que existieran, y un cero apuntaría a un usuario inexistente.
     Friend Shared Function LeerEnteroOpcional(lector As IDataRecord, columna As String) As Integer?
         Dim indice = lector.GetOrdinal(columna)
         If lector.IsDBNull(indice) Then Return Nothing
         Return lector.GetInt32(indice)
     End Function
 
-    ''' <summary>Lee una columna de fecha que admite nulos.</summary>
     Friend Shared Function LeerFechaOpcional(lector As IDataRecord, columna As String) As DateTime?
         Dim indice = lector.GetOrdinal(columna)
         If lector.IsDBNull(indice) Then Return Nothing
         Return lector.GetDateTime(indice)
     End Function
 
-    ''' <summary>Lee una columna binaria (hash o salt).</summary>
     Friend Shared Function LeerBytes(lector As IDataRecord, columna As String) As Byte()
         Dim indice = lector.GetOrdinal(columna)
         If lector.IsDBNull(indice) Then Return Nothing

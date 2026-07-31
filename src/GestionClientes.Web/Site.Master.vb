@@ -1,4 +1,4 @@
-Imports System.Web.Security
+﻿Imports System.Web.Security
 
 Public Class SiteMaster
     Inherits MasterPage
@@ -9,10 +9,8 @@ Public Class SiteMaster
         End If
     End Sub
 
-    ''' <summary>
-    ''' Cierra la sesión por completo: invalida el ticket de autenticación y abandona la sesión,
-    ''' de modo que no quede estado del usuario anterior reutilizable.
-    ''' </summary>
+    ' Invalida el ticket y abandona la sesión, para que no quede estado reutilizable del usuario
+    ' anterior.
     Protected Sub lnkSalir_Click(sender As Object, e As EventArgs) Handles lnkSalir.Click
         FormsAuthentication.SignOut()
         Session.Clear()
@@ -21,10 +19,7 @@ Public Class SiteMaster
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
-    ''' <summary>
-    ''' Nombre a mostrar en la barra superior: el nombre completo si el ticket lo trae, y si no el
-    ''' nombre de usuario.
-    ''' </summary>
+    ' El nombre completo si el ticket lo trae; si no, el nombre de usuario.
     Private Function ObtenerNombreParaMostrar() As String
         ' Se accede a través de Page.User y no de User a secas: MasterPage no expone la propiedad
         ' User, solo la expone Page. Escribirlo sin el prefijo no compila (BC30451).

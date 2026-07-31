@@ -1,7 +1,6 @@
 ''' <summary>
 ''' Usuario del sistema. El hash y el salt se manejan como arreglos de bytes y nunca se
-''' convierten a texto: no hay motivo para que la contraseña o su derivado existan como String
-''' más allá del momento de la verificación.
+''' convierten a texto.
 ''' </summary>
 Public Class Usuario
 

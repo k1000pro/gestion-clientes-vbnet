@@ -7,13 +7,9 @@ Public Class PaginaClientes
 
     Private ReadOnly _clientes As New ServicioCliente()
 
-    ''' <summary>Tamaño de página del listado de clientes.</summary>
     Private Const TamanoPaginaClientes As Integer = 10
 
-    ''' <summary>
-    ''' Criterios actuales del listado. Viven en ViewState y no en campos de la clase porque una
-    ''' instancia de página no sobrevive al postback.
-    ''' </summary>
+    ' En ViewState y no en campos de la clase: una instancia de página no sobrevive al postback.
     Private Property PaginaActual As Integer
         Get
             Dim valor = ViewState("PaginaActual")
@@ -83,11 +79,8 @@ Public Class PaginaClientes
         CargarClientes()
     End Sub
 
-    ''' <summary>
-    ''' Reordena por la columna pulsada. Pulsar la misma columna invierte la dirección; cambiar de
-    ''' columna vuelve a ascendente y a la primera página, porque la fila que se estaba viendo ya
-    ''' no está donde estaba.
-    ''' </summary>
+    ' Pulsar la misma columna invierte la dirección; cambiar de columna vuelve a ascendente y a
+    ' la primera página, porque la fila que se estaba viendo ya no está donde estaba.
     Protected Sub gvClientes_Sorting(sender As Object, e As GridViewSortEventArgs) Handles gvClientes.Sorting
         If String.IsNullOrEmpty(e.SortExpression) Then Return
 
@@ -219,11 +212,8 @@ Public Class PaginaClientes
         Return 0
     End Function
 
-    ''' <summary>
-    ''' Recupera la marca de versión que se envió al formulario. Viaja en Base64 dentro de un
-    ''' campo oculto y no en Session: es estado de esta página concreta, y una sesión perdida no
-    ''' debe convertir una edición en una sobrescritura silenciosa.
-    ''' </summary>
+    ' Viaja en Base64 dentro de un campo oculto y no en Session: una sesión perdida no debe
+    ' convertir una edición en una sobrescritura silenciosa.
     Private Function LeerRowVersionDelFormulario() As Byte()
         If String.IsNullOrWhiteSpace(hdnRowVersion.Value) Then Return Nothing
 
@@ -247,7 +237,7 @@ Public Class PaginaClientes
         txtDireccion.Text = String.Empty
     End Sub
 
-    ''' <summary>Muestra un aviso. El texto se codifica porque puede contener datos del usuario.</summary>
+    ' El texto se codifica porque puede contener datos del usuario.
     Private Sub MostrarAviso(texto As String, exitoso As Boolean)
         If String.IsNullOrWhiteSpace(texto) Then
             OcultarAviso()
@@ -264,10 +254,8 @@ Public Class PaginaClientes
         litAviso.Text = String.Empty
     End Sub
 
-    ''' <summary>
-    ''' Confirma el borrado. El identificador llega del campo oculto que rellenó el modal, y se
-    ''' valida igual que cualquier otra entrada: el diálogo es comodidad de interfaz, no control.
-    ''' </summary>
+    ' El identificador llega del campo oculto que rellenó el modal y se valida como cualquier
+    ' otra entrada: el diálogo es comodidad de interfaz, no un control.
     Protected Sub btnConfirmarEliminar_Click(sender As Object, e As EventArgs) Handles btnConfirmarEliminar.Click
         Dim clienteId As Integer
 
@@ -280,11 +268,8 @@ Public Class PaginaClientes
         EliminarCliente(clienteId)
     End Sub
 
-    ''' <summary>
-    ''' Prepara el nombre del cliente para viajar dentro de un atributo HTML delimitado por
-    ''' comillas simples. HtmlAttributeEncode no escapa el apóstrofo, así que se hace aparte: un
-    ''' apellido como O'Brien cerraría el atributo antes de tiempo.
-    ''' </summary>
+    ' HtmlAttributeEncode no escapa el apóstrofo, así que se hace aparte: dentro de un atributo
+    ' delimitado por comillas simples, un apellido como O'Brien lo cerraría antes de tiempo.
     Protected Function NombreParaAtributo(elemento As Object) As String
         Dim cliente = TryCast(elemento, Cliente)
         If cliente Is Nothing Then Return String.Empty

@@ -6,11 +6,8 @@ Imports GestionClientes.Entidades
 Public Class UsuarioDAL
 
     ''' <summary>
-    ''' Busca un usuario por su nombre. Devuelve Nothing si no existe.
-    '''
-    ''' Trae el hash y el salt para que la verificación ocurra en la aplicación. Enviar la
-    ''' contraseña a SQL Server para compararla allí obligaría a transportarla y la expondría en
-    ''' los planes de ejecución y en cualquier traza del motor.
+    ''' Nothing si el usuario no existe. Trae el hash y el salt para verificar en la aplicación:
+    ''' comparar en SQL Server expondría la contraseña en planes de ejecución y trazas del motor.
     ''' </summary>
     Public Function ObtenerPorNombre(nombreUsuario As String) As Usuario
         If String.IsNullOrWhiteSpace(nombreUsuario) Then Return Nothing

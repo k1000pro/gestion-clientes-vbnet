@@ -1,24 +1,15 @@
-Imports System.Data
+﻿Imports System.Data
 Imports System.Data.SqlClient
 Imports GestionClientes.Entidades
 
 ''' <summary>
-''' Acceso a datos de la tabla Clientes.
-'''
-''' Los métodos de escritura reciben el usuario que realiza la acción y lo pasan al procedimiento
-''' almacenado, que registra la bitácora dentro de la misma transacción que el cambio. Por eso no
-''' existe aquí ningún método "RegistrarEnBitacora": no es posible modificar un cliente sin que
-''' quede auditado.
+''' Acceso a datos de la tabla Clientes. Los métodos de escritura pasan al procedimiento
+''' almacenado el usuario que realiza la acción, y este registra la bitácora en la misma
+''' transacción; por eso no hay aquí ningún método de escritura en la bitácora.
 ''' </summary>
 Public Class ClienteDAL
 
-    ''' <summary>
-    ''' Devuelve una página de clientes junto con el total que cumple el filtro.
-    '''
-    ''' El parámetro de salida se lee DESPUÉS de cerrar el lector: SQL Server no entrega los
-    ''' parámetros de salida hasta que el conjunto de resultados se ha consumido por completo, así
-    ''' que leerlo antes devolvería Nothing.
-    ''' </summary>
+    ''' <summary>Una página de clientes junto con el total que cumple el filtro.</summary>
     Public Function Listar(criterios As CriteriosCliente) As ResultadoPaginado(Of Cliente)
         Dim consulta = If(criterios, New CriteriosCliente())
 
@@ -49,6 +40,8 @@ Public Class ClienteDAL
                     End While
                 End Using
 
+                ' Después de cerrar el lector: SQL Server no entrega los parámetros de salida
+                ' hasta consumir por completo el conjunto de resultados.
                 If parametroTotal.Value IsNot Nothing AndAlso Not Convert.IsDBNull(parametroTotal.Value) Then
                     resultado.TotalRegistros = CInt(parametroTotal.Value)
                 End If
@@ -58,7 +51,7 @@ Public Class ClienteDAL
         Return resultado
     End Function
 
-    ''' <summary>Obtiene un cliente por su identificador. Devuelve Nothing si no existe.</summary>
+    ''' <summary>Nothing si el cliente no existe.</summary>
     Public Function ObtenerPorId(clienteId As Integer) As Cliente
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Cliente_ObtenerPorId")
@@ -75,8 +68,7 @@ Public Class ClienteDAL
         End Using
     End Function
 
-    ''' <summary>Inserta un cliente y devuelve el identificador asignado.</summary>
-    ''' <exception cref="ReglaNegocioException">Si el documento ya está registrado.</exception>
+    ''' <summary>Devuelve el identificador asignado.</summary>
     Public Function Insertar(cliente As Cliente, usuarioId As Integer, nombreUsuario As String) As Integer
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Cliente_Insertar")
@@ -99,8 +91,6 @@ Public Class ClienteDAL
         End Using
     End Function
 
-    ''' <summary>Actualiza un cliente existente.</summary>
-    ''' <exception cref="ReglaNegocioException">Si el cliente no existe o el documento se repite.</exception>
     Public Sub Actualizar(cliente As Cliente, usuarioId As Integer, nombreUsuario As String)
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Cliente_Actualizar")
@@ -123,8 +113,7 @@ Public Class ClienteDAL
         End Using
     End Sub
 
-    ''' <summary>Elimina un cliente. El snapshot del registro queda en la bitácora.</summary>
-    ''' <exception cref="ReglaNegocioException">Si el cliente no existe.</exception>
+    ' Borrado lógico. El snapshot del registro queda en la bitácora.
     Public Sub Eliminar(clienteId As Integer, usuarioId As Integer, nombreUsuario As String)
         Using conexion As New SqlConnection(SqlHelper.ObtenerCadenaConexion())
             Using comando = SqlHelper.CrearComando(conexion, "dbo.usp_Cliente_Eliminar")
@@ -142,7 +131,6 @@ Public Class ClienteDAL
         End Using
     End Sub
 
-    ''' <summary>Agrega los parámetros de datos del cliente, convirtiendo cadenas vacías a NULL.</summary>
     Private Shared Sub AgregarParametrosDeCliente(comando As SqlCommand, cliente As Cliente)
         comando.Parameters.Add("@Nombres", SqlDbType.NVarChar, 100).Value = cliente.Nombres.Trim()
         comando.Parameters.Add("@Apellidos", SqlDbType.NVarChar, 100).Value = cliente.Apellidos.Trim()
@@ -157,7 +145,7 @@ Public Class ClienteDAL
         comando.Parameters.Add("@NombreUsuario", SqlDbType.NVarChar, 50).Value = nombreUsuario
     End Sub
 
-    ''' <summary>Un campo opcional vacío se guarda como NULL, no como cadena vacía.</summary>
+    ' Un campo opcional vacío se guarda como NULL, no como cadena vacía.
     Private Shared Function ValorOpcional(valor As String) As Object
         If String.IsNullOrWhiteSpace(valor) Then Return DBNull.Value
         Return valor.Trim()

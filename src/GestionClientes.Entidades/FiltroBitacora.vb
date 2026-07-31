@@ -9,13 +9,11 @@ Public Class FiltroBitacora
     Public Property Accion As String = String.Empty
     Public Property NombreUsuario As String = String.Empty
 
-    ''' <summary>
-    ''' Columna por la que ordenar. El procedimiento reconoce "FechaHora", "Accion" y
-    ''' "NombreUsuario"; cualquier otro valor cae en el orden de desempate.
-    ''' </summary>
+    ' El procedimiento reconoce "FechaHora", "Accion" y "NombreUsuario". Cualquier otro valor cae
+    ' en el orden de desempate.
     Public Property Orden As String = "FechaHora"
 
-    ''' <summary>La bitácora se lee de lo más reciente a lo más antiguo por omisión.</summary>
+    ' De lo más reciente a lo más antiguo por omisión.
     Public Property Descendente As Boolean = True
 
     Public Property Pagina As Integer = 1

@@ -1,9 +1,5 @@
 ''' <summary>
-''' Representa a un cliente del sistema. Es un contenedor de datos: no contiene reglas de
-''' negocio ni acceso a base de datos.
-'''
-''' Hereda de EntidadAuditable los campos de creación, modificación y borrado lógico, que son
-''' comunes a cualquier entidad persistida y no describen nada propio de un cliente.
+''' Cliente del sistema. Contenedor de datos: sin reglas de negocio ni acceso a base de datos.
 ''' </summary>
 Public Class Cliente
     Inherits EntidadAuditable
@@ -16,13 +12,10 @@ Public Class Cliente
     Public Property Telefono As String = String.Empty
     Public Property Direccion As String = String.Empty
 
-    ''' <summary>
-    ''' Marca de versión de la fila, mantenida por SQL Server. Se usa para detectar que otro
-    ''' usuario modificó el registro entre que este lo cargó y lo guardó.
-    ''' </summary>
+    ' Mantenida por SQL Server. Detecta que otro usuario modificó el registro entre que este lo
+    ' cargó y lo guardó.
     Public Property RowVersion As Byte()
 
-    ''' <summary>Nombre y apellidos concatenados, para mostrar en la interfaz.</summary>
     Public ReadOnly Property NombreCompleto As String
         Get
             Return (Nombres & " " & Apellidos).Trim()
